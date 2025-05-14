@@ -7,8 +7,10 @@ const Categories = () => {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    // Lấy selectedCategory và hàm selectCategory từ Context
-    const { selectedCategory, selectCategory } = useCategory();
+    const { setSelectedCategory, selectedCategory, selectCategory } = useCategory();
+    const handleSelect = (category) => {
+        setSelectedCategory(category); // Cập nhật context
+    };
 
     useEffect(() => {
         const fetchAllGroups = async () => {

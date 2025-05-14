@@ -120,7 +120,7 @@ const Navbar = () => {
                         <NavLink to="/products" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
                             Shop
                         </NavLink>
-                        <NavLink to="/collections" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                        <NavLink to="/collection" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
                             Collections
                         </NavLink>
                         <NavLink to="/contact" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
@@ -129,7 +129,7 @@ const Navbar = () => {
                     </div>
                     {/* Mobile Actions */}
                     <div className="pt-4 pb-3 border-t border-gray-700">
-                        <div className="flex items-center justify-center space-x-4 px-5"> {/* Căn giữa các action */}
+                        <div className="flex items-center justify-center space-x-4 px-5"> 
                             <button aria-label="Search" className="p-2 rounded-full text-gray-300 hover:bg-gray-700 hover:text-white">
                                 <FaSearch className="h-6 w-6" />
                             </button>

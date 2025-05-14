@@ -1,33 +1,32 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import ProductList from './components/ProductList';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Categories from './components/Categories';
-import { CategoryProvider } from './contexts/CategoryContext';
+  import React, { useState } from 'react';
+  import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+  import ProductList from './components/ProductList';
+  import Navbar from './components/Navbar';
+  import Footer from './components/Footer';
+  import Categories from './components/Categories';
+  import { CategoryProvider } from './contexts/CategoryContext';
+  import MyCollectionPage from './components/MyCollection';
 
-function App() {
-  const [selectedCategory, setSelectedCategory] = useState({ id: null, name: 'Tất cả' });
+  function App() {
+    return (
+      <CategoryProvider>
+        <div className="App flex flex-col min-h-screen bg-slate-100">
+            <Navbar />
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
-  };
+          <main className="flex-grow pt-2 sm:pt-2"> 
+            <Categories />
+            <Routes>
+              <Route path="/" element={<ProductList />} />
+              <Route path="/card" element={<MyCollectionPage />} />
+              <Route path="/collection" element={<MyCollectionPage />} />
+              <Route path="/wishlist" element={<MyCollectionPage />} />
+            </Routes>
+            
+          </main>
+          <Footer />
+        </div>
+      </CategoryProvider>
+    );
+  }
 
-  return (
-    <CategoryProvider>
-      <div className="App flex flex-col min-h-screen bg-slate-100">
-          <Navbar />
-
-        <main className="flex-grow pt-2 sm:pt-2"> 
-          <Categories
-            onSelectCategory={handleCategorySelect}
-          />
-          <ProductList />
-        </main>
-        <Footer />
-      </div>
-    </CategoryProvider>
-  );
-}
-
-export default App;
+  export default App;
