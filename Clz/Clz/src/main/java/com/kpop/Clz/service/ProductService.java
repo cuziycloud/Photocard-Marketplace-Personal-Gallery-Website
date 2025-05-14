@@ -1,3 +1,4 @@
+// src/main/java/com/kpop/Clz/service/ProductService.java
 package com.kpop.Clz.service;
 
 import com.kpop.Clz.model.Product;
@@ -8,18 +9,23 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-@Service // Đánh dấu đây là một Spring Service bean
+@Service
 public class ProductService {
 
     private final ProductRepository productRepository;
 
-    @Autowired // Spring tự động inject một instance của ProductRepository
+    @Autowired
     public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
     }
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
+    }
+
+    // Lấy sản phẩm theo group ID
+    public List<Product> getProductsByGroupId(Integer groupId) {
+        return productRepository.findByGroupId(groupId);
     }
 
     public Optional<Product> getProductById(Long id) {

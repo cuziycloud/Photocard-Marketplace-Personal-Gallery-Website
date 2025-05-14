@@ -1,12 +1,18 @@
 // src/services/productService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/products'; // URL của backend API
+const API_URL = 'http://localhost:8080/api/products';
 
-const getAllProducts = () => {
-    return axios.get(API_URL);
+// Sửa đổi getAllProducts để chấp nhận groupId
+const getAllProducts = (groupId = null) => {
+    let url = API_URL;
+    if (groupId) {
+        url += `?groupId=${groupId}`;
+    }
+    return axios.get(url);
 };
 
+// ... các hàm khác giữ nguyên ...
 const getProductById = (id) => {
     return axios.get(`${API_URL}/${id}`);
 };

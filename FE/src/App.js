@@ -4,12 +4,14 @@ import ProductList from './components/ProductList';
 import './App.css'; 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import Categories from './components/Categories';
 
 function App() {
   return (
     <div className="App">
         <Navbar />
       <main>
+        <Categories />
         <ProductList /> 
       </main>
       <Footer />

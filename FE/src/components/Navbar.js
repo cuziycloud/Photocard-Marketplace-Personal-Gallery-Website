@@ -1,14 +1,13 @@
-// src/components/Navbar.js
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { FaReact, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa'; // Chọn icon logo bạn thích
+import { FaReact, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-    const closeMobileMenu = () => { // Đảm bảo đóng menu khi click link
+    const closeMobileMenu = () => { 
         if (isMobileMenuOpen) {
             setIsMobileMenuOpen(false);
         }
@@ -16,13 +15,12 @@ const Navbar = () => {
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50); // Ngưỡng cuộn để navbar đổi style
+            setIsScrolled(window.scrollY > 50); 
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Hàm tạo class cho NavLink, linh hoạt dựa trên trạng thái
     const navLinkClasses = ({ isActive }) =>
         `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
             isActive
@@ -37,7 +35,7 @@ const Navbar = () => {
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
         }`;
 
-    // Class cho các nút icon actions
+
     const actionButtonClasses = `p-2 rounded-full transition-colors ${
         isScrolled || isMobileMenuOpen
             ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -47,11 +45,11 @@ const Navbar = () => {
     return (
         <nav
             className={`fixed w-full z-50 transition-all duration-300 ease-in-out ${
-                isScrolled || isMobileMenuOpen ? 'bg-gray-800 shadow-lg' : 'bg-white/90 backdrop-blur-md shadow-sm' // Nền trắng mờ khi chưa cuộn
+                isScrolled || isMobileMenuOpen ? 'bg-gray-800 shadow-lg' : 'bg-white/90 backdrop-blur-md shadow-sm' 
             }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16"> {/* Chiều cao Navbar là h-16 */}
+                <div className="flex items-center justify-between h-16"> 
                     {/* Logo */}
                     <div className="flex-shrink-0">
                         <Link to="/" onClick={closeMobileMenu} className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-indigo-500 transition-colors`}>
@@ -67,13 +65,13 @@ const Navbar = () => {
                                 Home
                             </NavLink>
                             <NavLink to="/products" className={navLinkClasses} onClick={closeMobileMenu}>
-                                Shop
+                                Card
                             </NavLink>
-                            <NavLink to="/collections" className={navLinkClasses} onClick={closeMobileMenu}>
-                                Collections
+                            <NavLink to="/collection" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Collection
                             </NavLink>
-                            <NavLink to="/contact" className={navLinkClasses} onClick={closeMobileMenu}>
-                                Contact
+                            <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Wishlist
                             </NavLink>
                         </div>
                     </div>
@@ -89,17 +87,9 @@ const Navbar = () => {
                                 3
                             </span>
                         </Link>
-                         {/* Optional Login Button
-                         <Link
-                            to="/login"
-                            className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm transition-colors ${isScrolled || isMobileMenuOpen ? 'text-white bg-indigo-600 hover:bg-indigo-700' : 'text-indigo-700 bg-indigo-100 hover:bg-indigo-200'}`}
-                         >
-                            Login
-                        </Link> */}
                     </div>
 
-                    {/* Mobile Menu Button */}
-                    <div className="md:hidden flex items-center"> {/* Sẽ không có Desktop Actions ở đây */}
+                    <div className="md:hidden flex items-center"> 
                         <button
                             onClick={toggleMobileMenu}
                             type="button"
@@ -118,8 +108,6 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Mobile Menu, show/hide based on menu state. */}
-            {/* Tailwind UI thường dùng 'absolute top-16' để menu mobile nằm ngay dưới navbar */}
             {isMobileMenuOpen && (
                 <div className="md:hidden absolute top-16 inset-x-0 bg-gray-800 pb-3 sm:pb-4 shadow-lg transition transform origin-top" id="mobile-menu">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -152,16 +140,6 @@ const Navbar = () => {
                                 <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">3</span>
                             </Link>
                         </div>
-                         {/* Optional Login Button for Mobile
-                         <div className="mt-3 px-2 space-y-1">
-                            <Link
-                                to="/login"
-                                className="block w-full px-3 py-2 rounded-md text-center text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                                onClick={closeMobileMenu}
-                            >
-                                Login
-                            </Link>
-                        </div> */}
                     </div>
                 </div>
             )}
