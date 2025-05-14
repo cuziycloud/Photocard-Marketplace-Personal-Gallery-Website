@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.util.Date;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "user_wishlist")
@@ -26,7 +27,8 @@ public class UserWishlistItem {
     @JoinColumn(name = "product_id", referencedColumnName = "id")
     private Product product;
 
-    @Column(name = "added_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @CreationTimestamp 
+    @Column(name = "added_at", nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date addedAt;
 

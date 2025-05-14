@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { FaRegHeart, FaHeart, FaTimesCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom'; 
+import { FaRegHeart, FaHeart, FaEye, FaPlus, FaShoppingCart, FaChevronLeft, FaChevronRight} from 'react-icons/fa';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 20;
+const MOCK_USER_ID = 2; 
 
-const MOCK_USER_ID_FOR_WISHLIST = 2; // lay id user
-
-const ProductList = ({ selectedCategory }) => { 
+const ProductList = ({ selectedCategory }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [wishlistStatus, setWishlistStatus] = useState({}); 
+    const [wishlistStatus, setWishlistStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
+    const navigate = useNavigate(); 
 
     const fetchProductsAndWishlistStatus = useCallback(async () => {
         setLoading(true);
@@ -21,29 +21,28 @@ const ProductList = ({ selectedCategory }) => {
         try {
             const groupId = selectedCategory ? selectedCategory.id : null;
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, {
-                params: { groupId: groupId } 
+                params: { groupId: groupId }
             });
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
             setProducts(fetchedProducts);
             setCurrentPage(1);
 
-            if (fetchedProducts.length > 0 && MOCK_USER_ID_FOR_WISHLIST) {
+            if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
                 const newWishlistStatus = {};
                 for (const productId of productIds) {
                     try {
-                        const statusResponse = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID_FOR_WISHLIST}/wishlist/check/${productId}`);
+                        const statusResponse = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`);
                         newWishlistStatus[productId] = statusResponse.data.isInWishlist;
                     } catch (checkErr) {
                         console.warn(`Could not check wishlist status for product ${productId}:`, checkErr);
-                        newWishlistStatus[productId] = false; 
+                        newWishlistStatus[productId] = false;
                     }
                 }
                 setWishlistStatus(newWishlistStatus);
             } else {
                 setWishlistStatus({});
             }
-
         } catch (err) {
             console.error("Error fetching products or wishlist status:", err);
             setError("Không thể tải danh sách sản phẩm.");
@@ -52,27 +51,26 @@ const ProductList = ({ selectedCategory }) => {
         } finally {
             setLoading(false);
         }
-    }, [selectedCategory, MOCK_USER_ID_FOR_WISHLIST]);
+    }, [selectedCategory, MOCK_USER_ID]);
 
 
     useEffect(() => {
         fetchProductsAndWishlistStatus();
-    }, [fetchProductsAndWishlistStatus]); 
+    }, [fetchProductsAndWishlistStatus]);
 
 
     const toggleWishlist = async (productId, productName) => {
-        if (!MOCK_USER_ID_FOR_WISHLIST) {
+        if (!MOCK_USER_ID) {
             alert("Vui lòng đăng nhập để sử dụng chức năng này.");
             return;
         }
-
         const isInWishlist = wishlistStatus[productId];
         try {
             if (isInWishlist) {
-                await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID_FOR_WISHLIST}/wishlist/${productId}`);
+                await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`);
                 setWishlistStatus(prev => ({ ...prev, [productId]: false }));
             } else {
-                await axios.post(`${API_BASE_URL}/users/${MOCK_USER_ID_FOR_WISHLIST}/wishlist/${productId}`);
+                await axios.post(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`);
                 setWishlistStatus(prev => ({ ...prev, [productId]: true }));
             }
         } catch (err) {
@@ -80,6 +78,24 @@ const ProductList = ({ selectedCategory }) => {
             alert(`Lỗi khi cập nhật Wishlist: ${err.response?.data?.message || err.message}`);
         }
     };
+
+    const handleAddToCart = (product, e) => {
+        e.preventDefault(); 
+        e.stopPropagation(); 
+        if (product.stockQuantity === 0) {
+            alert("Sản phẩm này đã hết hàng!");
+            return;
+        }
+        console.log("Added to cart (simulated):", product.name, product.id);
+        alert(`Đã thêm "${product.name}" vào giỏ hàng (mô phỏng).`);
+    };
+
+    const handleViewDetailsSeparate = (productId, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(`/product/${productId}`);
+    };
+
 
     const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
     const paginatedProducts = products.slice(
@@ -95,80 +111,107 @@ const ProductList = ({ selectedCategory }) => {
     };
 
     if (loading) return (
-        <div className="text-center text-lg text-gray-600 p-5 font-['Arial',_sans-serif]">
-            Đang tải sản phẩm...
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mt-3"></div>
+        <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
+            <p className="ml-3 text-gray-700 text-sm">Đang tải sản phẩm...</p>
         </div>
     );
 
     if (error) return (
-        <div className="text-center text-lg text-red-600 p-5 font-['Arial',_sans-serif] font-semibold">
-            {error}
+        <div className="text-center p-10 bg-red-50 rounded-lg shadow max-w-md mx-auto">
+            <p className="text-lg font-semibold text-red-700">Rất tiếc, đã xảy ra lỗi!</p>
+            <p className="text-sm mt-1 text-red-600">{error}</p>
+            <button
+                onClick={fetchProductsAndWishlistStatus}
+                className="mt-4 px-4 py-2 bg-pink-600 text-white text-sm rounded-md hover:bg-pink-700 transition-colors"
+            >
+                Thử lại
+            </button>
         </div>
     );
 
     if (products.length === 0 && !loading) return (
-        <div className="text-center text-lg text-gray-600 p-5 font-['Arial',_sans-serif]">
-            Không tìm thấy sản phẩm nào
-            {selectedCategory && selectedCategory.name && selectedCategory.name !== 'Tất cả' ? ` cho nhóm "${selectedCategory.name}"` : ''}.
+        <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto"> 
+            <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
+            <p className="text-lg font-medium text-slate-700">Không tìm thấy sản phẩm nào</p>
+            {selectedCategory && selectedCategory.name && selectedCategory.name !== 'Tất cả' ?
+                <p className="text-sm mt-1 text-slate-500">cho nhóm "{selectedCategory.name}".</p>
+                : <p className="text-sm mt-1 text-slate-500">Vui lòng thử lại hoặc chọn danh mục khác.</p>
+            }
         </div>
     );
 
 
     return (
-        <div className="p-5 bg-gradient-to-br from-slate-100 to-slate-200 font-['Arial',_sans-serif] min-h-screen">
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-6">
+        <div className="p-4 sm:p-6 bg-slate-50 font-['Inter',_sans-serif] min-h-screen">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"> 
                 {paginatedProducts.map(product => (
                     <div
                         key={product.id}
-                        className="bg-gradient-to-br from-white to-slate-50 rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 ease-in-out hover:translate-y-[-6px] hover:scale-[1.02] hover:shadow-xl"
+                        className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
                     >
                         <Link to={`/product/${product.id}`} className="flex flex-col h-full text-inherit no-underline">
-                            <div className="group relative w-full">
+                            <div className="relative">
                                 <div style={{ paddingTop: '135%' }} />
-                                <div className="absolute inset-0 bg-[#f1f3f6] p-[20px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
-                                    <img
-                                        src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                        alt={product.name}
-                                        className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                                    />
-                                </div>
+                                    <div className="absolute inset-0 bg-[#f1f3f6] p-[20px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+                                        <img
+                                            src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                            alt={product.name}
+                                            className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+                                        />
+                                        </div>
 
                                 <button
-                                    className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm border-none rounded-full w-[34px] h-[34px] flex items-center justify-center cursor-pointer text-2xl text-slate-400 shadow-md transition-all duration-200 ease-in-out hover:text-pink-500 hover:bg-white"
+                                    className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
                                     onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
+                                        e.preventDefault(); e.stopPropagation();
                                         toggleWishlist(product.id, product.name);
                                     }}
-                                    aria-label="Yêu thích"
+                                    aria-label={wishlistStatus[product.id] ? "Remove from Wishlist" : "Add to Wishlist"}
                                 >
-                                    {wishlistStatus[product.id] 
-                                        ? <FaHeart className="block w-[1em] h-[1em]" style={{ color: '#ff4d6d' }} />
-                                        : <FaRegHeart className="block w-[1em] h-[1em]" />}
+                                    {wishlistStatus[product.id]
+                                        ? <FaHeart className="w-4 h-4 text-pink-500" />
+                                        : <FaRegHeart className="w-4 h-4" />}
+                                </button>
+
+                                <button
+                                    className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500
+                                        ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                                    `}
+                                    onClick={(e) => handleAddToCart(product, e)}
+                                    aria-label="Add to Cart"
+                                    disabled={product.stockQuantity === 0}
+                                >
+                                    <FaShoppingCart className="w-4 h-4" />
                                 </button>
                             </div>
 
-                            <div className="p-[15px_18px_18px_18px] text-left flex-grow flex flex-col justify-between">
+                            {/* Product Info Section */}
+                            <div className="p-3.5 flex-grow flex flex-col justify-between">
                                 <div>
                                     {product.group && (
-                                        <p className="text-[0.9em] font-medium text-gray-500 mb-[2px] truncate">{product.group.name}</p>
+                                        <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
                                     )}
-                                    <h3 className="text-[1.05em] font-semibold text-slate-800 mb-2 leading-tight min-h-[calc(1.05em*1.3*2)] overflow-hidden" title={product.name}>
-                                        <span className="line-clamp-2">{product.name}</span>
+                                    <h3
+                                        className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]"
+                                        title={product.name}
+                                    >
+                                        {product.name}
                                     </h3>
-                                    {product.version && <p className="text-xs text-slate-500">{product.version}</p>}
+                                    {product.version && (
+                                        <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
+                                    )}
                                 </div>
 
-                                <div className="mt-auto pt-2">
-                                    <div className="flex items-baseline flex-wrap gap-2">
-                                        <p className="text-[1.2em] font-bold text-[#e91e63] m-0">
+                                <div className="mt-2.5">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-md font-bold text-pink-600">
                                             ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
                                         </p>
+                                        <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                            {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
+                                        </p>
                                     </div>
-                                    <p className="text-xs text-slate-600 mt-1">
-                                        Còn lại: {product.stockQuantity}
-                                    </p>
                                 </div>
                             </div>
                         </Link>
@@ -177,54 +220,58 @@ const ProductList = ({ selectedCategory }) => {
             </div>
 
             {totalPages > 1 && (
-                 <div className="flex justify-center items-center mt-8 sm:mt-10 gap-1 sm:gap-2 text-xs sm:text-sm font-medium">
-                 <button
-                     onClick={() => goToPage(currentPage - 1)}
-                     disabled={currentPage === 1}
-                     className="px-2 sm:px-3 py-1 rounded border text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                     <FaChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1 sm:mr-0" />
-                     <span className="hidden sm:inline">Trước</span>
-                 </button>
-                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                   .filter(page => {
-                     if (totalPages <= 5) return true;
-                     if (page <= 2 || page >= totalPages -1 || Math.abs(page - currentPage) <=1){
-                         return true;
-                     }
-                     if ((page === currentPage - 2 && currentPage > 3) || (page === currentPage + 2 && currentPage < totalPages - 2)){
-                          return 'ellipsis';
-                     }
-                     return false;
-                   })
-                   .reduce((acc, pageOrEllipsis, index, arr) => {
-                     if (pageOrEllipsis === 'ellipsis') {
-                         if (acc.length === 0 || acc[acc.length -1].type !== 'span') {
-                             acc.push(<span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-1">...</span>);
-                         }
-                     } else {
-                         acc.push(
-                             <button
-                                 key={pageOrEllipsis}
-                                 onClick={() => goToPage(pageOrEllipsis)}
-                                 className={`px-2.5 sm:px-3 py-1 rounded border ${currentPage === pageOrEllipsis ? 'bg-pink-500 text-white' : 'text-gray-700 hover:bg-gray-200'}`} // Màu hồng cho trang hiện tại
-                             >
-                                 {pageOrEllipsis}
-                             </button>
-                         );
-                     }
-                     return acc;
-                   }, [])
-                 }
-                 <button
-                     onClick={() => goToPage(currentPage + 1)}
-                     disabled={currentPage === totalPages}
-                     className="px-2 sm:px-3 py-1 rounded border text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                      <span className="hidden sm:inline">Sau</span>
-                     <FaChevronRight className="h-3 w-3 sm:h-4 sm:w-4 inline ml-1 sm:ml-0" />
-                 </button>
-             </div>
+                 <div className="mt-8 flex justify-center items-center space-x-1.5">
+                    <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Previous Page"
+                    >
+                        <FaChevronLeft className="h-4 w-4" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        if (totalPages <= 5) return true;
+                        if (page <= 2 || page >= totalPages -1 || Math.abs(page - currentPage) <=1){
+                            return true;
+                        }
+                        if ((page === currentPage - 2 && currentPage > 3) || (page === currentPage + 2 && currentPage < totalPages - 2)){
+                             return 'ellipsis';
+                        }
+                        return false;
+                      })
+                      .reduce((acc, pageOrEllipsis, index) => {
+                        if (pageOrEllipsis === 'ellipsis') {
+                            if (acc.length === 0 || (acc[acc.length -1] && acc[acc.length -1].key && !acc[acc.length -1].key.startsWith('ellipsis')) ) {
+                                acc.push(<span key={`ellipsis-${index}`} className="px-2.5 py-2 text-slate-500 text-sm">...</span>);
+                            }
+                        } else if (typeof pageOrEllipsis === 'number') {
+                            acc.push(
+                                <button
+                                    key={pageOrEllipsis}
+                                    onClick={() => goToPage(pageOrEllipsis)}
+                                    className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors
+                                        ${currentPage === pageOrEllipsis
+                                            ? 'bg-pink-600 text-white border-pink-600'
+                                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {pageOrEllipsis}
+                                </button>
+                            );
+                        }
+                        return acc;
+                      }, [])
+                    }
+                    <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Next Page"
+                    >
+                        <FaChevronRight className="h-4 w-4" />
+                    </button>
+                </div>
             )}
         </div>
     );
