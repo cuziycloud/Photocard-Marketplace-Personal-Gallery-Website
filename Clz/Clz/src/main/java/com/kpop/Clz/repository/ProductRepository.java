@@ -1,4 +1,10 @@
-package com.kpop.Clz.Repository;
+package com.kpop.Clz.repository;
 
-public class ProductRepository {
+import com.kpop.Clz.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ProductRepository extends JpaRepository<Product, Long> {
+
 }
