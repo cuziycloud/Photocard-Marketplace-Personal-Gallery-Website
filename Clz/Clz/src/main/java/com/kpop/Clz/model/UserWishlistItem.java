@@ -28,7 +28,7 @@ public class UserWishlistItem {
 
     @Column(name = "added_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date addedAt; 
+    private Date addedAt;
 
     public UserWishlistItem(User user, Product product) {
         this.id = new UserWishlistItemId(user.getId(), product.getId());
