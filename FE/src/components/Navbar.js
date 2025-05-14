@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { FaReact, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
+import { FaMusic, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -52,9 +52,13 @@ const Navbar = () => {
                 <div className="flex items-center justify-between h-16"> 
                     {/* Logo */}
                     <div className="flex-shrink-0">
-                        <Link to="/" onClick={closeMobileMenu} className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-indigo-500 transition-colors`}>
-                            <FaReact className={`h-8 w-8 mr-2 transition-colors ${isScrolled || isMobileMenuOpen ? 'text-indigo-400' : 'text-indigo-600 group-hover:text-indigo-500' }`} />
-                            <span className="font-bold text-xl">K-CARDS</span>
+                        <Link
+                            to="/"
+                            onClick={closeMobileMenu}
+                            className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-pink-500 transition-colors`}
+                        >
+                            <FaMusic className={`h-8 w-8 mr-2 transition-colors ${isScrolled || isMobileMenuOpen ? 'text-pink-400' : 'text-pink-600 group-hover:text-pink-500'}`} />
+                            <span className="font-bold text-xl">K-Clz</span>
                         </Link>
                     </div>
 
@@ -76,7 +80,6 @@ const Navbar = () => {
                         </div>
                     </div>
 
-                    {/* Desktop Actions */}
                     <div className="hidden md:flex items-center space-x-3">
                         <button aria-label="Search" className={actionButtonClasses}>
                             <FaSearch className="h-5 w-5" />

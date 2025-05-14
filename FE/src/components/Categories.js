@@ -1,16 +1,16 @@
 // src/components/Categories.js
 import React, { useState, useEffect } from 'react';
-// ... các imports khác ...
 import groupService from '../services/groupService';
+import { useCategory } from '../contexts/CategoryContext'; // IMPORT hook useCategory
 
-const Categories = ({ onSelectCategory }) => {
+const Categories = () => {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    // Lấy selectedCategory và hàm selectCategory từ Context
+    const { selectedCategory, selectCategory } = useCategory();
 
     useEffect(() => {
-        // ... (useEffect fetchAllGroups giữ nguyên như trước) ...
         const fetchAllGroups = async () => {
             try {
                 setLoading(true);
@@ -24,7 +24,7 @@ const Categories = ({ onSelectCategory }) => {
                 }
                 setError(null);
             } catch (err) {
-                console.error("Failed to fetch groups:", err);
+                console.error("Categories.js: Failed to fetch groups:", err);
                 setError("Không thể tải danh sách nhóm. Vui lòng thử lại sau.");
                 setGroups([]);
             } finally {
@@ -34,13 +34,8 @@ const Categories = ({ onSelectCategory }) => {
         fetchAllGroups();
     }, []);
 
-
     const handleCategoryClick = (groupId, groupName) => {
-        setSelectedGroupId(groupId);
-        if (onSelectCategory) {
-            onSelectCategory({ id: groupId, name: groupName });
-        }
-        console.log(`Selected group: ${groupName} (ID: ${groupId})`);
+        selectCategory({ id: groupId, name: groupName }); // Gọi hàm từ context để cập nhật state toàn cục
     };
 
     if (loading) {
@@ -56,60 +51,67 @@ const Categories = ({ onSelectCategory }) => {
         return null;
     }
 
-    const renderCategoryItem = (group) => (
-        <div
-            key={group ? group.id : 'all-categories'}
-            className="flex flex-col items-center w-24 sm:w-28 cursor-pointer group" 
-            onClick={() => handleCategoryClick(group ? group.id : null, group ? group.name : 'Tất cả')}
-            title={group ? `Xem sản phẩm của ${group.name}` : 'Xem tất cả sản phẩm'}
-        >
-            <div
-                className={`
-                    w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center
-                    overflow-hidden border-2 transition-all duration-200 ease-in-out
-                    group-hover:shadow-lg group-hover:border-sky-500 group-hover:scale-105
-                    ${(group && selectedGroupId === group.id) || (!group && selectedGroupId === null)
-                        ? 'border-sky-600 shadow-md ring-2 ring-sky-600 ring-offset-2' 
-                        : 'border-slate-300 bg-slate-200' 
-                    }
-                `}
-            >
-                {(!group || !group.logoImageUrl) && (
-                    <span className={`text-xl sm:text-2xl font-semibold ${
-                        (group && selectedGroupId === group.id) || (!group && selectedGroupId === null)
-                        ? 'text-sky-600'
-                        : 'text-slate-500'
-                    }`}>
-                        {group ? group.name.charAt(0).toUpperCase() : 'All'}
-                    </span>
-                )}
-                {group && group.logoImageUrl && (
-                    <img
-                        src={group.logoImageUrl}
-                        alt={group.name}
-                        className="w-full h-full object-cover"
-                    />
-                )}
-            </div>
-            <p className={`
-                mt-2 text-xs sm:text-sm text-center font-medium transition-colors duration-200
-                group-hover:text-sky-600
-                ${(group && selectedGroupId === group.id) || (!group && selectedGroupId === null)
-                    ? 'text-sky-700 font-semibold'
-                    : 'text-slate-600'
-                }
-            `}>
-                {group ? group.name : 'All'}
-            </p>
-        </div>
-    );
+    const renderCategoryItem = (group, isAllButton = false) => {
+        const categoryId = isAllButton ? null : group.id;
+        const categoryName = isAllButton ? 'Tất cả' : group.name;
+        const logoUrl = isAllButton ? null : group.logoImageUrl;
+        const isActive = selectedCategory.id === categoryId;
 
+        return (
+            <div
+                key={categoryId === null ? 'all-categories' : categoryId}
+                className="flex flex-col items-center w-24 sm:w-28 cursor-pointer group"
+                onClick={() => handleCategoryClick(categoryId, categoryName)}
+                title={isAllButton ? 'Xem tất cả sản phẩm' : `Xem sản phẩm của ${categoryName}`}
+            >
+                <div
+                    className={`
+                        w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center
+                        overflow-hidden border-2 transition-all duration-200 ease-in-out
+                        group-hover:shadow-lg group-hover:border-sky-500 group-hover:scale-105
+                        ${isActive
+                            ? 'border-sky-600 shadow-md ring-2 ring-sky-600 ring-offset-2'
+                            : 'border-slate-300 bg-slate-200'
+                        }
+                    `}
+                >
+                    {(!logoUrl && !isAllButton) && (
+                        <span className={`text-xl sm:text-2xl font-semibold ${isActive ? 'text-sky-600' : 'text-slate-500'}`}>
+                            {categoryName.charAt(0).toUpperCase()}
+                        </span>
+                    )}
+                    {isAllButton && (
+                         <span className={`text-xl sm:text-2xl font-semibold ${isActive ? 'text-sky-600' : 'text-slate-500'}`}>
+                            All
+                        </span>
+                    )}
+                    {logoUrl && (
+                        <img
+                            src={logoUrl}
+                            alt={categoryName}
+                            className="w-full h-full object-cover"
+                        />
+                    )}
+                </div>
+                <p className={`
+                    mt-2 text-xs sm:text-sm text-center font-medium transition-colors duration-200
+                    group-hover:text-sky-600
+                    ${isActive ? 'text-sky-700 font-semibold' : 'text-slate-600'}
+                `}>
+                    {categoryName}
+                </p>
+            </div>
+        );
+    };
 
     return (
-        <section className="mt-16 py-8 bg-white"> 
+        <section className="mt-16 py-8 bg-white">
             <div className="container mx-auto px-4">
-                <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 sm:gap-x-6 sm:gap-y-8"> 
-                    {renderCategoryItem(null)}
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 sm:gap-x-6 sm:gap-y-8">
+                    {/* Nút "Tất cả" */}
+                    {renderCategoryItem(null, true)} {/* Gọi renderCategoryItem cho nút "Tất cả" */}
+
+                    {/* Các nhóm nhạc */}
                     {groups.map((group) => renderCategoryItem(group))}
                 </div>
             </div>

@@ -1,18 +1,16 @@
-// src/services/productService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/products';
+const API_URL = 'http://localhost:8080/api/products'; 
 
-// Sửa đổi getAllProducts để chấp nhận groupId
-const getAllProducts = (groupId = null) => {
-    let url = API_URL;
-    if (groupId) {
-        url += `?groupId=${groupId}`;
+const getAllProducts = (groupId = null) => { 
+    let urlToFetch = API_URL;
+    if (groupId) { 
+        urlToFetch += `?groupId=${groupId}`;
     }
-    return axios.get(url);
+    console.log(`productService: Fetching products from URL: ${urlToFetch}`); 
+    return axios.get(urlToFetch);
 };
 
-// ... các hàm khác giữ nguyên ...
 const getProductById = (id) => {
     return axios.get(`${API_URL}/${id}`);
 };
@@ -29,7 +27,7 @@ const deleteProduct = (id) => {
     return axios.delete(`${API_URL}/${id}`);
 };
 
-// eslint-disable-next-line import/no-anonymous-default-export
+
 export default {
     getAllProducts,
     getProductById,

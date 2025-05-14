@@ -34,8 +34,7 @@ public class ProductController {
         }
         return ResponseEntity.ok(products);
     }
-
-    // ... các phương thức khác giữ nguyên ...
+    
     // GET http://localhost:8080/api/products/{id}
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {

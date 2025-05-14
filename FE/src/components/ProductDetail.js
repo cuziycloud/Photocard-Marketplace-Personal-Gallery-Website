@@ -1,14 +1,13 @@
-// src/components/ProductDetail.js
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom'; // useParams để lấy productId từ URL
+import { useParams, Link } from 'react-router-dom'; 
 import productService from '../services/productService';
-import './ProductDetail.css'; // Tạo file CSS riêng
+import './ProductDetail.css'; 
 
 const ProductDetail = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { productId } = useParams(); // Lấy productId từ URL
+    const { productId } = useParams(); 
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -28,7 +27,7 @@ const ProductDetail = () => {
         if (productId) {
             fetchProduct();
         }
-    }, [productId]); // Chạy lại useEffect khi productId thay đổi
+    }, [productId]); 
 
     if (loading) return <p>Đang tải chi tiết sản phẩm...</p>;
     if (error) return <p style={{ color: 'red' }}>{error}</p>;
@@ -44,7 +43,6 @@ const ProductDetail = () => {
                     <p><strong>Mô tả:</strong> {product.description}</p>
                     <p><strong>Giá:</strong> ${product.price.toFixed(2)}</p>
                     <p><strong>Số lượng còn lại:</strong> {product.stockQuantity}</p>
-                    {/* Thêm các thông tin khác nếu có */}
                     <button className="add-to-cart-button">Thêm vào giỏ hàng</button>
                 </div>
             </div>

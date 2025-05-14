@@ -1,79 +1,122 @@
-// src/components/ProductList.js
 import React, { useState, useEffect } from 'react';
 import productService from '../services/productService';
 import { Link } from 'react-router-dom';
-import './ProductList.css'; // Import CSS
-// Import icon trái tim (ví dụ từ react-icons)
-// Chạy: npm install react-icons
-import { FaRegHeart, FaHeart } from 'react-icons/fa'; // FaRegHeart: rỗng, FaHeart: đầy
+import { FaRegHeart, FaHeart } from 'react-icons/fa';
+import { useCategory } from '../contexts/CategoryContext';
 
 const ProductList = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    // State để quản lý trạng thái yêu thích (ví dụ đơn giản, thực tế cần lưu trữ)
     const [favorites, setFavorites] = useState({});
+    const { selectedCategory } = useCategory();
 
     useEffect(() => {
         const fetchProducts = async () => {
+            setLoading(true);
+            setError(null);
             try {
-                setLoading(true);
-                const response = await productService.getAllProducts();
-                setProducts(response.data);
-                setError(null);
+                const groupId = selectedCategory ? selectedCategory.id : null;
+                const response = await productService.getAllProducts(groupId);
+                setProducts(Array.isArray(response.data) ? response.data : (response.data.content || []));
             } catch (err) {
-                console.error("Error fetching products:", err);
-                setError("Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.");
+                setError("Không thể tải danh sách sản phẩm.");
+                setProducts([]);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProducts();
-    }, []);
+        if (selectedCategory) {
+            fetchProducts();
+        }
+    }, [selectedCategory]);
 
     const toggleFavorite = (productId) => {
-        setFavorites(prevFavorites => ({
-            ...prevFavorites,
-            [productId]: !prevFavorites[productId]
-        }));
-        // Trong ứng dụng thực tế, bạn sẽ gọi API để lưu trạng thái yêu thích
-        console.log(`Toggled favorite for product ${productId}`);
+        setFavorites(prev => ({ ...prev, [productId]: !prev[productId] }));
     };
 
-    if (loading) return <p className="status-message">Đang tải sản phẩm...</p>;
-    if (error) return <p className="status-message error-message">{error}</p>;
-    if (products.length === 0) return <p className="status-message">Không có sản phẩm nào để hiển thị.</p>;
+    if (loading) return (
+        <div className="text-center text-lg text-gray-600 p-5 font-['Arial',_sans-serif]">
+            Đang tải sản phẩm...
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mt-3"></div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="text-center text-lg text-red-600 p-5 font-['Arial',_sans-serif] font-semibold">
+            {error}
+        </div>
+    );
+
+    if (products.length === 0 && !loading) return (
+        <div className="text-center text-lg text-gray-600 p-5 font-['Arial',_sans-serif]">
+            Không tìm thấy sản phẩm nào
+            {selectedCategory && selectedCategory.name !== 'Tất cả' ? ` cho nhóm "${selectedCategory.name}"` : ''}.
+        </div>
+    );
 
     return (
-        <div className="product-list-page">
-            <div className="product-grid">
+        <div className="p-5 bg-gradient-to-br from-slate-100 to-slate-200 font-['Arial',_sans-serif] min-h-screen">
+            {selectedCategory && selectedCategory.name && (
+                <h2
+                    className="text-center mb-7 text-3xl font-bold text-gray-800"
+                >
+                    {selectedCategory.name === 'Tất cả' || !selectedCategory.name
+                        ? 'Tất cả Sản Phẩm'
+                        : `Sản phẩm nhóm: ${selectedCategory.name}`}
+                </h2>
+            )}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-6">
                 {products.map(product => (
-                    <div key={product.id} className="product-card">
-                        <Link to={`/product/${product.id}`} className="product-card-link">
-                            <div className="product-image-container">
-                                <img
-                                    src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                    alt={product.name}
-                                    className="product-image"
-                                />
+                    <div
+                        key={product.id}
+                        className="bg-gradient-to-br from-white to-slate-50 rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 ease-in-out hover:translate-y-[-6px] hover:scale-[1.02] hover:shadow-xl"
+                    >
+                        <Link to={`/product/${product.id}`} className="flex flex-col h-full text-inherit no-underline">
+                            <div className="group relative w-full"> 
+                                <div style={{ paddingTop: '135%' }} />
+                                    <div className="absolute inset-0 bg-[#f1f3f6] p-[50px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+                                        <img
+                                            src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                            alt={product.name}
+                                            className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+                                        />
+                                    </div>
+
                                 <button
-                                    className="favorite-button"
+                                    className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm border-none rounded-full w-[34px] h-[34px] flex items-center justify-center cursor-pointer text-2xl text-slate-400 shadow-md transition-all duration-200 ease-in-out hover:text-pink-500 hover:bg-white"
                                     onClick={(e) => {
-                                        e.preventDefault(); // Ngăn Link chuyển hướng khi click icon
-                                        e.stopPropagation(); // Ngăn sự kiện nổi bọt lên Link
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         toggleFavorite(product.id);
                                     }}
                                     aria-label="Yêu thích"
                                 >
-                                    {favorites[product.id] ? <FaHeart color="red" /> : <FaRegHeart />}
+                                    {favorites[product.id] ? <FaHeart className="block w-[1em] h-[1em]" style={{ color: '#ff4d6d' }} /> : <FaRegHeart className="block w-[1em] h-[1em]" />}
                                 </button>
                             </div>
-                            <div className="product-info">
-                                <h3 className="product-name">{product.name}</h3>
-                                {/* Nếu có thông tin phiên bản hoặc mô tả ngắn gọn */}
-                                {product.version && <p className="product-version">{product.version}</p>}
-                                <p className="product-price">Giá: ${product.price.toFixed(2)}</p>
-                                <p className="product-stock">Còn lại: {product.stockQuantity}</p>
+
+                            <div className="p-[15px_18px_18px_18px] text-left flex-grow flex flex-col justify-between">
+                                <div>
+                                    {product.group && (
+                                        <p className="text-[0.9em] font-medium text-gray-500 mb-[2px]">{product.group.name}</p>
+                                    )}
+                                    <h3 className="text-[1.05em] font-semibold text-slate-800 mb-2 leading-tight min-h-[calc(1.05em*1.3*2)] overflow-hidden"> 
+                                        <span className="line-clamp-2">{product.name}</span>
+                                    </h3>
+                                    {product.version && <p className="text-xs text-slate-500">{product.version}</p>}
+                                </div>
+
+                                <div className="mt-auto"> 
+                                    <div className="flex items-baseline flex-wrap gap-2">
+                                        <p className="text-[1.2em] font-bold text-[#e91e63] m-0"> 
+                                            ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-slate-600 mt-1">
+                                        Còn lại: {product.stockQuantity}
+                                    </p>
+                                </div>
                             </div>
                         </Link>
                     </div>

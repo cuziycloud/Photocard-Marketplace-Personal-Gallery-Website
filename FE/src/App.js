@@ -1,21 +1,32 @@
-// src/App.js
-import React from 'react';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ProductList from './components/ProductList';
-import './App.css'; 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Categories from './components/Categories';
+import { CategoryProvider } from './contexts/CategoryContext';
 
 function App() {
+  const [selectedCategory, setSelectedCategory] = useState({ id: null, name: 'Tất cả' });
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+  };
+
   return (
-    <div className="App">
-        <Navbar />
-      <main className="flex-grow pt-1">
-        <Categories />
-        <ProductList /> 
-      </main>
-      <Footer />
-    </div>
+    <CategoryProvider>
+      <div className="App flex flex-col min-h-screen bg-slate-100">
+          <Navbar />
+
+        <main className="flex-grow pt-2 sm:pt-2"> 
+          <Categories
+            onSelectCategory={handleCategorySelect}
+          />
+          <ProductList />
+        </main>
+        <Footer />
+      </div>
+    </CategoryProvider>
   );
 }
 
