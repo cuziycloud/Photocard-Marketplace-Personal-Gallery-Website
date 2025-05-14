@@ -38,6 +38,7 @@ public class GroupService {
         return groupRepository.findById(id)
                 .map(existingGroup -> {
                     existingGroup.setName(groupDetails.getName());
+                    existingGroup.setLogoImageUrl(groupDetails.getLogoImageUrl());
                     return groupRepository.save(existingGroup);
                 });
     }

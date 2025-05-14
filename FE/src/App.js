@@ -10,7 +10,7 @@ function App() {
   return (
     <div className="App">
         <Navbar />
-      <main>
+      <main className="flex-grow pt-1">
         <Categories />
         <ProductList /> 
       </main>

@@ -25,6 +25,9 @@ public class Group {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(name = "logo_image_url", length = 500)
+    private String logoImageUrl;
+
     @OneToMany(mappedBy = "group", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @JsonManagedReference
     private Set<Product> products = new HashSet<>();
