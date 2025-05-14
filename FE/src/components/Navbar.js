@@ -1,19 +1,172 @@
 // src/components/Navbar.js
-import React from 'react';
-import { Link } from 'react-router-dom';
-import './Navbar.css';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { FaReact, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa'; // Chọn icon logo bạn thích
 
 const Navbar = () => {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => { // Đảm bảo đóng menu khi click link
+        if (isMobileMenuOpen) {
+            setIsMobileMenuOpen(false);
+        }
+    };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 50); // Ngưỡng cuộn để navbar đổi style
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Hàm tạo class cho NavLink, linh hoạt dựa trên trạng thái
+    const navLinkClasses = ({ isActive }) =>
+        `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
+            isActive
+                ? (isScrolled || isMobileMenuOpen ? 'text-white bg-indigo-700' : 'text-indigo-600 underline underline-offset-4 decoration-2 decoration-indigo-600')
+                : (isScrolled || isMobileMenuOpen ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:text-indigo-600')
+        }`;
+
+    const mobileNavLinkClasses = ({ isActive }) =>
+        `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-300 ${
+            isActive
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+        }`;
+
+    // Class cho các nút icon actions
+    const actionButtonClasses = `p-2 rounded-full transition-colors ${
+        isScrolled || isMobileMenuOpen
+            ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            : 'text-gray-600 hover:bg-gray-200 hover:text-indigo-600'
+    }`;
+
     return (
-        <nav className="navbar">
-            <Link to="/" className="navbar-brand">K-Pop Card Store</Link>
-            <ul className="navbar-nav">
-                <li className="nav-item">
-                    <Link to="/products" className="nav-link">Sản phẩm</Link>
-                </li>
-                {/* Thêm các link khác sau: Giỏ hàng, Đăng nhập,... */}
-            </ul>
+        <nav
+            className={`fixed w-full z-50 transition-all duration-300 ease-in-out ${
+                isScrolled || isMobileMenuOpen ? 'bg-gray-800 shadow-lg' : 'bg-white/90 backdrop-blur-md shadow-sm' // Nền trắng mờ khi chưa cuộn
+            }`}
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16"> {/* Chiều cao Navbar là h-16 */}
+                    {/* Logo */}
+                    <div className="flex-shrink-0">
+                        <Link to="/" onClick={closeMobileMenu} className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-indigo-500 transition-colors`}>
+                            <FaReact className={`h-8 w-8 mr-2 transition-colors ${isScrolled || isMobileMenuOpen ? 'text-indigo-400' : 'text-indigo-600 group-hover:text-indigo-500' }`} />
+                            <span className="font-bold text-xl">K-CARDS</span>
+                        </Link>
+                    </div>
+
+                    {/* Desktop Menu Links */}
+                    <div className="hidden md:block">
+                        <div className="ml-10 flex items-baseline space-x-4">
+                            <NavLink to="/" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Home
+                            </NavLink>
+                            <NavLink to="/products" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Shop
+                            </NavLink>
+                            <NavLink to="/collections" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Collections
+                            </NavLink>
+                            <NavLink to="/contact" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Contact
+                            </NavLink>
+                        </div>
+                    </div>
+
+                    {/* Desktop Actions */}
+                    <div className="hidden md:flex items-center space-x-3">
+                        <button aria-label="Search" className={actionButtonClasses}>
+                            <FaSearch className="h-5 w-5" />
+                        </button>
+                        <Link to="/cart" aria-label="Cart" className={`${actionButtonClasses} relative`}>
+                            <FaShoppingCart className="h-5 w-5" />
+                            <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                                3
+                            </span>
+                        </Link>
+                         {/* Optional Login Button
+                         <Link
+                            to="/login"
+                            className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm transition-colors ${isScrolled || isMobileMenuOpen ? 'text-white bg-indigo-600 hover:bg-indigo-700' : 'text-indigo-700 bg-indigo-100 hover:bg-indigo-200'}`}
+                         >
+                            Login
+                        </Link> */}
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <div className="md:hidden flex items-center"> {/* Sẽ không có Desktop Actions ở đây */}
+                        <button
+                            onClick={toggleMobileMenu}
+                            type="button"
+                            className={`inline-flex items-center justify-center p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white ${actionButtonClasses}`} // Sử dụng lại actionButtonClasses cho styling nhất quán
+                            aria-controls="mobile-menu"
+                            aria-expanded={isMobileMenuOpen}
+                        >
+                            <span className="sr-only">Open main menu</span>
+                            {isMobileMenuOpen ? (
+                                <FaTimes className="block h-6 w-6" aria-hidden="true" />
+                            ) : (
+                                <FaBars className="block h-6 w-6" aria-hidden="true" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Menu, show/hide based on menu state. */}
+            {/* Tailwind UI thường dùng 'absolute top-16' để menu mobile nằm ngay dưới navbar */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden absolute top-16 inset-x-0 bg-gray-800 pb-3 sm:pb-4 shadow-lg transition transform origin-top" id="mobile-menu">
+                    <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                        <NavLink to="/" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Home
+                        </NavLink>
+                        <NavLink to="/products" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Shop
+                        </NavLink>
+                        <NavLink to="/collections" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Collections
+                        </NavLink>
+                        <NavLink to="/contact" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Contact
+                        </NavLink>
+                    </div>
+                    {/* Mobile Actions */}
+                    <div className="pt-4 pb-3 border-t border-gray-700">
+                        <div className="flex items-center justify-center space-x-4 px-5"> {/* Căn giữa các action */}
+                            <button aria-label="Search" className="p-2 rounded-full text-gray-300 hover:bg-gray-700 hover:text-white">
+                                <FaSearch className="h-6 w-6" />
+                            </button>
+                            <Link
+                                to="/cart"
+                                aria-label="Cart"
+                                className="p-2 rounded-full text-gray-300 hover:bg-gray-700 hover:text-white relative"
+                                onClick={closeMobileMenu}
+                            >
+                                <FaShoppingCart className="h-6 w-6" />
+                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">3</span>
+                            </Link>
+                        </div>
+                         {/* Optional Login Button for Mobile
+                         <div className="mt-3 px-2 space-y-1">
+                            <Link
+                                to="/login"
+                                className="block w-full px-3 py-2 rounded-md text-center text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                                onClick={closeMobileMenu}
+                            >
+                                Login
+                            </Link>
+                        </div> */}
+                    </div>
+                </div>
+            )}
         </nav>
     );
 };
+
 export default Navbar;

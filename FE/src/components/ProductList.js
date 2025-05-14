@@ -46,7 +46,6 @@ const ProductList = () => {
 
     return (
         <div className="product-list-page">
-            <h2 className="page-title">Danh sách Card K-Pop</h2>
             <div className="product-grid">
                 {products.map(product => (
                     <div key={product.id} className="product-card">

@@ -1,30 +1,271 @@
 /* src/components/Navbar.css */
+:root {
+    --nav-text-color: #333; /* Màu chữ khi nền sáng (ban đầu) */
+    --nav-text-color-scrolled: #f8f9fa; /* Màu chữ khi nền tối (khi cuộn) */
+    --nav-background-initial: transparent; /* Nền trong suốt ban đầu */
+    --nav-background-scrolled: #2c3e50; /* Nền khi cuộn */
+    --nav-accent-color: #5cb85c; /* Màu nhấn (ví dụ: xanh lá) */
+    --nav-height: 75px;
+    --nav-border-radius: 25px; /* Cho các nút CTA */
+}
+
 .navbar {
-    background-color: #333;
-    padding: 10px 20px;
+    background: var(--nav-background-initial);
+    color: var(--nav-text-color);
+    height: var(--nav-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+    position: fixed; /* Hoặc sticky nếu bạn muốn nó chiếm không gian */
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+    padding: 0 20px; /* Thêm padding ngang */
+}
+
+.navbar.scrolled {
+    background: var(--nav-background-scrolled);
+    color: var(--nav-text-color-scrolled);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 100%;
+    width: 100%;
+    max-width: 1200px; /* Giới hạn chiều rộng nội dung navbar */
 }
-.navbar-brand {
-    color: white;
+
+.navbar-logo {
+    /* Màu sẽ được kế thừa từ .navbar */
+    justify-self: flex-start;
+    cursor: pointer;
     text-decoration: none;
-    font-size: 1.5em;
-    font-weight: bold;
-}
-.navbar-nav {
-    list-style: none;
+    font-size: 1.7rem;
+    font-weight: 700;
     display: flex;
+    align-items: center;
+    letter-spacing: 1px;
+    transition: color 0.3s ease;
+}
+
+.navbar.scrolled .navbar-logo {
+    color: var(--nav-text-color-scrolled); /* Đảm bảo logo cũng đổi màu */
+}
+.navbar-logo:hover {
+    color: var(--nav-accent-color);
+}
+
+
+.navbar-icon {
+    margin-right: 0.5rem;
+    font-size: 1.8rem;
+    color: var(--nav-accent-color); /* Icon logo có màu nhấn riêng */
+}
+.navbar.scrolled .navbar-icon {
+     /* Giữ màu icon khi scroll, hoặc đổi nếu muốn */
+    /* color: var(--nav-text-color-scrolled); */
+}
+
+
+.menu-icon {
+    display: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    /* Màu sẽ được kế thừa từ .navbar */
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    text-align: center;
     margin: 0;
     padding: 0;
+    margin-left: auto; /* Đẩy menu chính sang phải một chút trước actions */
+    margin-right: 30px; /* Khoảng cách với actions */
 }
+
 .nav-item {
-    margin-left: 15px;
+    height: var(--nav-height);
+    display: flex;
+    align-items: center;
 }
-.nav-link {
+
+.nav-links {
+    /* Màu sẽ được kế thừa từ .navbar */
+    text-decoration: none;
+    padding: 0.5rem 1.2rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    position: relative;
+}
+.navbar.scrolled .nav-links {
+    color: var(--nav-text-color-scrolled); /* Đảm bảo link cũng đổi màu */
+}
+
+.nav-links::after { /* Hiệu ứng gạch chân khi hover/active */
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -5px; /* Điều chỉnh vị trí gạch chân */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--nav-accent-color);
+    transition: width 0.3s ease;
+}
+
+.nav-links:hover::after,
+.nav-links.active-link::after {
+    width: 70%; /* Độ rộng gạch chân */
+}
+
+.nav-links:hover,
+.nav-links.active-link {
+    color: var(--nav-accent-color);
+}
+.navbar.scrolled .nav-links:hover,
+.navbar.scrolled .nav-links.active-link {
+    color: var(--nav-accent-color); /* Giữ màu nhấn khi hover/active */
+}
+
+
+.nav-actions-alt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.action-btn-alt {
+    /* Màu sẽ được kế thừa từ .navbar */
+    background: transparent;
+    border: none;
+    font-size: 1.2rem; /* Kích thước icon nhỏ hơn */
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: color 0.2s ease, background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.navbar.scrolled .action-btn-alt {
+    color: var(--nav-text-color-scrolled);
+}
+
+.action-btn-alt:hover {
+    color: var(--nav-accent-color);
+    /* background-color: rgba(0,0,0,0.05); */ /* Tùy chọn: nền nhẹ khi hover */
+}
+.navbar.scrolled .action-btn-alt:hover {
+    /* background-color: rgba(255,255,255,0.1); */
+}
+
+
+.nav-button-cta { /* Ví dụ nút Call to Action */
+    padding: 8px 20px;
+    border-radius: var(--nav-border-radius);
+    background: var(--nav-accent-color);
     color: white;
     text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: none;
+    cursor: pointer;
 }
-.nav-link:hover {
-    color: #ddd;
+.nav-button-cta:hover {
+    background-color: #4cae4c; /* Darker shade of accent */
+    transform: translateY(-2px);
+}
+
+/* Mobile Menu */
+@media screen and (max-width: 960px) {
+    .navbar {
+        padding: 0 20px; /* Đảm bảo padding trên mobile */
+        background: var(--nav-background-scrolled); /* Luôn có nền trên mobile */
+        color: var(--nav-text-color-scrolled);
+    }
+    .navbar.scrolled { /* Không cần thay đổi gì thêm cho mobile khi scroll */
+        /* background: var(--nav-background-scrolled); */
+        /* color: var(--nav-text-color-scrolled); */
+    }
+
+    .navbar-logo,
+    .navbar.scrolled .navbar-logo,
+    .nav-links,
+    .navbar.scrolled .nav-links,
+    .action-btn-alt,
+    .navbar.scrolled .action-btn-alt {
+        color: var(--nav-text-color-scrolled); /* Set màu chữ cố định cho mobile */
+    }
+    .navbar-icon { color: var(--nav-accent-color); } /* Giữ màu icon logo */
+
+
+    .menu-icon {
+        display: block;
+        order: 3; /* Đưa icon menu ra cuối bên phải */
+        margin-left: 15px; /* Khoảng cách với actions */
+    }
+
+    .nav-actions-alt {
+        order: 2; /* Đưa actions vào giữa logo và menu icon */
+    }
+    .navbar-logo {
+        order: 1;
+    }
+
+    .nav-menu {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        /* height: calc(100vh - var(--nav-height)); */
+        position: absolute;
+        top: var(--nav-height);
+        left: -100%;
+        opacity: 0;
+        transition: all 0.4s ease;
+        background: var(--nav-background-scrolled); /* Nền cho menu mobile */
+        padding: 20px 0;
+        margin-left: 0; /* Reset margin */
+        margin-right: 0;
+    }
+
+    .nav-menu.active {
+        left: 0;
+        opacity: 1;
+        z-index: 10; /* Đảm bảo menu mobile nằm trên actions */
+    }
+
+    .nav-item {
+        width: 100%;
+        height: auto;
+    }
+
+    .nav-links {
+        text-align: center;
+        padding: 1.2rem;
+        width: 100%;
+        display: block; /* Để chiếm full width */
+    }
+    .nav-links::after { /* Ẩn gạch chân mặc định trên mobile, có thể custom lại */
+        display: none;
+    }
+    .nav-links:hover,
+    .nav-links.active-link {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: var(--nav-accent-color);
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .navbar-logo { font-size: 1.5rem; }
+    .navbar-icon { font-size: 1.6rem; }
+    .nav-actions-alt { gap: 8px; }
+    .action-btn-alt { font-size: 1.1rem; padding: 6px; }
 }
