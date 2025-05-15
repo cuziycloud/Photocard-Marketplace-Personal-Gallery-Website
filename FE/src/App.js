@@ -7,6 +7,7 @@ import ProductList from './components/ProductList';
 import MyCollectionPage from './components/MyCollection';
 import WishlistPage from './components/WishlistPage';
 import { CategoryProvider } from './contexts/CategoryContext';
+import BackToTopButton from './components/BackToTopButton';
 
 const MainLayout = () => {
   const location = useLocation();
@@ -50,6 +51,7 @@ function App() {
           <Navbar />
           <MainLayout />
           <Footer />
+          <BackToTopButton />
         </div>
       </Router>
     </CategoryProvider>

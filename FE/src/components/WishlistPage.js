@@ -183,7 +183,6 @@ const WishlistPage = () => {
                             disabled
                         >
                             <option value="">Tất cả Nhóm</option>
-                            {/* Populate options from API later */}
                         </select>
                     </div>
                     <div className="flex items-center text-slate-700">
@@ -238,15 +237,14 @@ const WishlistPage = () => {
                                     if (page <= 2 || page >= totalPages -1 || Math.abs(page - currentPage) <=1){
                                         return true;
                                     }
-                                    // Hiển thị ... chỉ một lần
                                     if ((page === currentPage - 2 && currentPage > 3) || (page === currentPage + 2 && currentPage < totalPages - 2)){
-                                         return 'ellipsis'; // Use a string to represent ellipsis
+                                         return 'ellipsis'; 
                                     }
                                     return false;
                                   })
-                                  .reduce((acc, pageOrEllipsis, index, arr) => { // Reduce để tránh lặp lại ...
+                                  .reduce((acc, pageOrEllipsis, index, arr) => { 
                                     if (pageOrEllipsis === 'ellipsis') {
-                                        if (acc.length === 0 || acc[acc.length -1].type !== 'span') { // Kiểm tra phần tử cuối cùng
+                                        if (acc.length === 0 || acc[acc.length -1].type !== 'span') { 
                                             acc.push(<span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-1">...</span>);
                                         }
                                     } else {
