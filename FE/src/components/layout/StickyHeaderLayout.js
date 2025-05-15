@@ -7,6 +7,7 @@ import { useSearchFilter } from '../../contexts/SearchFilterContext';
 const StickyHeaderLayout = () => {
   const location = useLocation();
   const searchFilterContextValue = useSearchFilter();
+  const { searchTerm, sortOption, activeFilters, setSearchTerm, setSortOption, setActiveFilters } = useSearchFilter();
 
   const shouldShowCategories = !['/wishlist', '/card', '/collection', '/gallery', '/bubble'].includes(location.pathname.toLowerCase());
   const shouldShowSearchBar = location.pathname === '/';
@@ -51,6 +52,7 @@ const StickyHeaderLayout = () => {
           onSearchChange={searchFilterContextValue.setSearchTerm}
           onSortChange={searchFilterContextValue.setSortOption}
           onApplyFilters={searchFilterContextValue.setActiveFilters}
+          currentFilters={activeFilters}
         />
       )}
     </div>

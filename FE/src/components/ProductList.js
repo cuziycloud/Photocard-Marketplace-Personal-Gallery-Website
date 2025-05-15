@@ -1,10 +1,9 @@
-// src/components/ProductList.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaRegHeart, FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import axios from 'axios';
 import { useCategory } from '../contexts/CategoryContext';
-import { useSearchFilter } from '../contexts/SearchFilterContext'; // BƯỚC 1: Import useSearchFilter
+import { useSearchFilter } from '../contexts/SearchFilterContext'; 
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 20;
@@ -12,11 +11,10 @@ const MOCK_USER_ID = 2;
 
 const ProductList = () => {
     const { selectedCategory } = useCategory();
-    const { searchTerm, sortOption } // BƯỚC 2: Lấy searchTerm và sortOption (sau này có thể dùng activeFilters)
-      = useSearchFilter();
+    const { searchTerm, sortOption, activeFilters, setSearchTerm, setActiveFilters } = useSearchFilter();
 
-    const [allFetchedProducts, setAllFetchedProducts] = useState([]); // Lưu tất cả sản phẩm gốc từ API
-    const [displayedProducts, setDisplayedProducts] = useState([]); // Sản phẩm sẽ được hiển thị sau khi lọc/sắp xếp
+    const [allFetchedProducts, setAllFetchedProducts] = useState([]); 
+    const [displayedProducts, setDisplayedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
@@ -30,21 +28,13 @@ const ProductList = () => {
             const groupId = selectedCategory ? selectedCategory.id : null;
             console.log('ProductList: Fetching products with groupId:', groupId, 'Selected Category:', selectedCategory);
 
-            // TODO: Nếu backend hỗ trợ tìm kiếm, bạn có thể gửi searchTerm ở đây
-            // const params = { groupId };
-            // if (searchTerm) params.search = searchTerm;
-            // const productsResponse = await axios.get(`${API_BASE_URL}/products`, { params });
-
-            // Hiện tại, fetch tất cả theo groupId, lọc ở client
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, {
                 params: { groupId: groupId }
             });
 
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
-            setAllFetchedProducts(fetchedProducts); // Lưu sản phẩm gốc
-            // Không setDisplayedProducts trực tiếp ở đây, useEffect lọc sẽ làm điều đó
+            setAllFetchedProducts(fetchedProducts); 
 
-            // ... (logic wishlist status giữ nguyên, dựa trên fetchedProducts) ...
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
                 const newWishlistStatus = {};
@@ -53,7 +43,6 @@ const ProductList = () => {
                         const statusResponse = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`);
                         newWishlistStatus[productId] = statusResponse.data.isInWishlist;
                     } catch (checkErr) {
-                        // console.warn(`Could not check wishlist status for product ${productId}:`, checkErr);
                         newWishlistStatus[productId] = false;
                     }
                 }
@@ -70,18 +59,15 @@ const ProductList = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedCategory, MOCK_USER_ID /* searchTerm nếu gửi lên API */]);
+    }, [selectedCategory, MOCK_USER_ID]);
 
     useEffect(() => {
         fetchProductsAndWishlistStatus();
     }, [fetchProductsAndWishlistStatus]);
 
 
-    // BƯỚC 3: useEffect để lọc và sắp xếp sản phẩm
     useEffect(() => {
         let productsToDisplay = [...allFetchedProducts];
-
-        // Lọc theo searchTerm
         if (searchTerm && searchTerm.trim() !== '') {
             console.log("Filtering with searchTerm:", searchTerm); // DEBUG
             productsToDisplay = productsToDisplay.filter(product =>
@@ -89,23 +75,10 @@ const ProductList = () => {
             );
         }
 
-        // TODO: Lọc theo activeFilters (nếu có)
-
-        // TODO: Sắp xếp theo sortOption
-        // Ví dụ:
-        // switch (sortOption) {
-        //   case 'price-asc':
-        //     productsToDisplay.sort((a, b) => a.price - b.price);
-        //     break;
-        //   // ... các case khác
-        // }
-        console.log("Products after filtering/sorting:", productsToDisplay.length); // DEBUG
         setDisplayedProducts(productsToDisplay);
-        setCurrentPage(1); // Reset về trang 1 khi bộ lọc/tìm kiếm thay đổi
-    }, [allFetchedProducts, searchTerm, sortOption /*, activeFilters */]);
+        setCurrentPage(1); 
+    }, [allFetchedProducts, searchTerm, sortOption, activeFilters]);
 
-
-    // ... (toggleWishlist, handleAddToCart, handleViewDetailsSeparate giữ nguyên) ...
     const toggleWishlist = async (productId, productName) => {
         if (!MOCK_USER_ID) {
             alert("Vui lòng đăng nhập để sử dụng chức năng này.");
@@ -143,8 +116,6 @@ const ProductList = () => {
         navigate(`/product/${productId}`);
     };
 
-
-    // Tính toán phân trang dựa trên displayedProducts
     const totalPages = Math.ceil(displayedProducts.length / PRODUCTS_PER_PAGE);
     const paginatedProducts = displayedProducts.slice(
         (currentPage - 1) * PRODUCTS_PER_PAGE,
@@ -157,7 +128,6 @@ const ProductList = () => {
         }
     };
 
-    // Hiển thị loading chính chỉ khi chưa fetch được dữ liệu lần đầu
     if (loading && allFetchedProducts.length === 0) return (
         <div className="flex justify-center items-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
@@ -166,7 +136,6 @@ const ProductList = () => {
     );
 
     if (error) return (
-        // ... (error JSX)
         <div className="text-center p-10 bg-red-50 rounded-lg shadow max-w-md mx-auto">
             <p className="text-lg font-semibold text-red-700">Rất tiếc, đã xảy ra lỗi!</p>
             <p className="text-sm mt-1 text-red-600">{error}</p>
@@ -179,25 +148,19 @@ const ProductList = () => {
         </div>
     );
 
-
-    // Thông báo khi không có sản phẩm sau khi đã fetch và lọc
     if (displayedProducts.length === 0 && !loading) return (
         <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto">
             <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
             <p className="text-lg font-medium text-slate-700">
                 {searchTerm ? `Không tìm thấy sản phẩm nào với từ khóa "${searchTerm}"` : "Không tìm thấy sản phẩm nào"}
             </p>
-            {/* ... (thông báo khác nếu cần) ... */}
         </div>
     );
 
     return (
         <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-4 bg-slate-50 font-['Inter',_sans-serif] min-h-screen">
-            {/* Có thể hiển thị loading phụ khi đang lọc/sắp xếp nếu quá trình đó mất thời gian */}
-            {/* {loading && <p className="text-center">Đang cập nhật...</p>} */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {paginatedProducts.map(product => (
-                    // ... (JSX card sản phẩm của bạn, không thay đổi) ...
                      <div
                         key={product.id}
                         className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
@@ -272,7 +235,6 @@ const ProductList = () => {
             </div>
             {/* Phân trang */}
             {totalPages > 1 && (
-                // ... (JSX phân trang của bạn, không thay đổi) ...
                  <div className="mt-8 flex justify-center items-center space-x-1.5">
                     <button
                         onClick={() => goToPage(currentPage - 1)}
