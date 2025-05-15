@@ -11,7 +11,7 @@ import BackToTopButton from './components/BackToTopButton';
 
 const MainLayout = () => {
   const location = useLocation();
-  const hideCategoriesOnPaths = ['/wishlist', '/card', '/collection']; 
+  const hideCategoriesOnPaths = ['/wishlist', '/card', '/collection', '/gallery', '/bubble']; // KO HIỆN CATEGORY
   const shouldShowCategories = !hideCategoriesOnPaths.includes(location.pathname.toLowerCase());
   const navbarHeight = '4rem';
   const categoriesHeight = shouldShowCategories ? '2rem' : '0rem';

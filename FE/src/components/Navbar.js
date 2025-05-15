@@ -68,22 +68,22 @@ const Navbar = () => {
                             <NavLink to="/" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Home
                             </NavLink>
-                            <NavLink to="/products" className={navLinkClasses} onClick={closeMobileMenu}>
-                                Card
-                            </NavLink>
                             <NavLink to="/collection" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Collection
                             </NavLink>
                             <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Wishlist
                             </NavLink>
+                            <NavLink to="/gallery" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Gallery
+                            </NavLink>
+                            <NavLink to="/bubble" className={navLinkClasses} onClick={closeMobileMenu}>
+                                Bubble
+                            </NavLink>
                         </div>
                     </div>
 
                     <div className="hidden md:flex items-center space-x-3">
-                        <button aria-label="Search" className={actionButtonClasses}>
-                            <FaSearch className="h-5 w-5" />
-                        </button>
                         <Link to="/cart" aria-label="Cart" className={`${actionButtonClasses} relative`}>
                             <FaShoppingCart className="h-5 w-5" />
                             <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">

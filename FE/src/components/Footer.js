@@ -8,7 +8,7 @@ const Footer = () => {
             <div className="container mx-auto px-4 text-center">
                 <div className="flex items-center justify-center text-sm">
                     <FaRegCopyright className="mr-1.5 h-4 w-4" />
-                    <span>{currentYear} K-Clz. All about Yujin.</span>
+                    <span>{currentYear} K-Clz. All about Yujinie.</span>
                 </div>
             </div>
         </footer>
