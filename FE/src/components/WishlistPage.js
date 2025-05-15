@@ -168,17 +168,12 @@ const WishlistPage = () => {
     return (
         <div className="p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-slate-100 to-slate-200 font-['Arial',_sans-serif] min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-6 text-center">
-                    Danh Sách Yêu Thích
-                </h1>
-
                 <div className="mb-8 p-4 bg-white shadow rounded-lg text-center">
                     <p className="text-lg text-slate-700">
                         Bạn có <span className="font-bold text-orange-600">{wishlistedProducts.length}</span> sản phẩm trong danh sách yêu thích.
                     </p>
                 </div>
 
-                {/* Filter and Sort Controls - Tương tự MyCollectionPage */}
                 <div className="mb-6 p-4 bg-white shadow rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center text-slate-700">
                         <FaFilter className="mr-2 h-5 w-5 text-indigo-600" />

@@ -1,37 +1,57 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import ProductList from './components/ProductList';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Categories from './components/Categories';
-import { CategoryProvider } from './contexts/CategoryContext';
+import ProductList from './components/ProductList';
 import MyCollectionPage from './components/MyCollection';
 import WishlistPage from './components/WishlistPage';
+import { CategoryProvider } from './contexts/CategoryContext';
 
-function App() {
+const MainLayout = () => {
   const location = useLocation();
+  const hideCategoriesOnPaths = ['/wishlist', '/card', '/collection']; 
+  const shouldShowCategories = !hideCategoriesOnPaths.includes(location.pathname.toLowerCase());
+  const navbarHeight = '4rem';
+  const categoriesHeight = shouldShowCategories ? '2rem' : '0rem';
 
   return (
+    <div className="flex flex-col flex-grow"> 
+      {shouldShowCategories && (
+        <div className="bg-white shadow-sm sticky" style={{ top: navbarHeight, zIndex: 40 }}>
+          <Categories />
+        </div>
+      )}
+
+      <main
+        className="flex-grow bg-slate-100" 
+        style={{
+          paddingTop: shouldShowCategories
+            ? `calc(${navbarHeight} + ${categoriesHeight})` 
+            : navbarHeight 
+        }}
+      >
+        <Routes>
+          <Route path="/" element={<ProductList />} />
+          <Route path="/card" element={<MyCollectionPage />} />
+          <Route path="/collection" element={<MyCollectionPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
+function App() {
+  return (
     <CategoryProvider>
-      <div className="App flex flex-col min-h-screen bg-slate-100">
-        <Navbar />
-
-        <main className="flex-grow pt-2 sm:pt-2"> 
-          {location.pathname !== '/wishlist' && <Categories />}
-
-          {/* const hideCategories = ['/wishlist', '/login', '/register'].includes(location.pathname);
-          {!hideCategories && <Categories />} */}
-
-          <Routes>
-            <Route path="/" element={<ProductList />} />
-            <Route path="/card" element={<MyCollectionPage />} />
-            <Route path="/collection" element={<MyCollectionPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-          </Routes>
-        </main>
-
-        <Footer />
-      </div>
+      <Router>
+        <div className="App flex flex-col min-h-screen">
+          <Navbar />
+          <MainLayout />
+          <Footer />
+        </div>
+      </Router>
     </CategoryProvider>
   );
 }

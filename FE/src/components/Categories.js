@@ -1,7 +1,6 @@
-// src/components/Categories.js
 import React, { useState, useEffect } from 'react';
 import groupService from '../services/groupService';
-import { useCategory } from '../contexts/CategoryContext'; // IMPORT hook useCategory
+import { useCategory } from '../contexts/CategoryContext'; 
 
 const Categories = () => {
     const [groups, setGroups] = useState([]);
@@ -9,7 +8,7 @@ const Categories = () => {
     const [error, setError] = useState(null);
     const { setSelectedCategory, selectedCategory, selectCategory } = useCategory();
     const handleSelect = (category) => {
-        setSelectedCategory(category); // Cập nhật context
+        setSelectedCategory(category); 
     };
 
     useEffect(() => {
@@ -37,7 +36,7 @@ const Categories = () => {
     }, []);
 
     const handleCategoryClick = (groupId, groupName) => {
-        selectCategory({ id: groupId, name: groupName }); // Gọi hàm từ context để cập nhật state toàn cục
+        selectCategory({ id: groupId, name: groupName }); 
     };
 
     if (loading) {
@@ -107,13 +106,10 @@ const Categories = () => {
     };
 
     return (
-        <section className="mt-16 py-8 bg-white">
+        <section className="mt-0 py-4 bg-white"> 
             <div className="container mx-auto px-4">
                 <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 sm:gap-x-6 sm:gap-y-8">
-                    {/* Nút "Tất cả" */}
-                    {renderCategoryItem(null, true)} {/* Gọi renderCategoryItem cho nút "Tất cả" */}
-
-                    {/* Các nhóm nhạc */}
+                    {renderCategoryItem(null, true)}
                     {groups.map((group) => renderCategoryItem(group))}
                 </div>
             </div>

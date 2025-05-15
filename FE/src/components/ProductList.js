@@ -1,31 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; 
-import { FaRegHeart, FaHeart, FaEye, FaPlus, FaShoppingCart, FaChevronLeft, FaChevronRight} from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaRegHeart, FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight} from 'react-icons/fa';
 import axios from 'axios';
+import { useCategory } from '../contexts/CategoryContext'; // 1. Import useCategory
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 20;
-const MOCK_USER_ID = 2; 
+const MOCK_USER_ID = 2;
 
-const ProductList = ({ selectedCategory }) => {
+// 2. Xóa selectedCategory khỏi danh sách props
+const ProductList = () => {
+    const { selectedCategory } = useCategory(); // 3. Lấy selectedCategory từ context
+
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
 
     const fetchProductsAndWishlistStatus = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
+            // selectedCategory giờ đây đến từ context
             const groupId = selectedCategory ? selectedCategory.id : null;
+            // Thêm log để kiểm tra
+            console.log('ProductList: Fetching products with groupId:', groupId, 'Selected Category:', selectedCategory);
+
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, {
-                params: { groupId: groupId }
+                params: { groupId: groupId } // Backend của bạn cần hỗ trợ param này
             });
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
             setProducts(fetchedProducts);
-            setCurrentPage(1);
+            setCurrentPage(1); // Reset về trang 1 khi category thay đổi hoặc fetch lại
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
@@ -51,12 +59,13 @@ const ProductList = ({ selectedCategory }) => {
         } finally {
             setLoading(false);
         }
+    // 4. selectedCategory (từ context) là dependency của useCallback
     }, [selectedCategory, MOCK_USER_ID]);
 
 
     useEffect(() => {
         fetchProductsAndWishlistStatus();
-    }, [fetchProductsAndWishlistStatus]);
+    }, [fetchProductsAndWishlistStatus]); 
 
 
     const toggleWishlist = async (productId, productName) => {
@@ -80,8 +89,8 @@ const ProductList = ({ selectedCategory }) => {
     };
 
     const handleAddToCart = (product, e) => {
-        e.preventDefault(); 
-        e.stopPropagation(); 
+        e.preventDefault();
+        e.stopPropagation();
         if (product.stockQuantity === 0) {
             alert("Sản phẩm này đã hết hàng!");
             return;
@@ -106,7 +115,7 @@ const ProductList = ({ selectedCategory }) => {
     const goToPage = (page) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // window.scrollTo({ top: 0, behavior: 'smooth' }); // Xóa hoặc comment dòng này
         }
     };
 
@@ -131,7 +140,7 @@ const ProductList = ({ selectedCategory }) => {
     );
 
     if (products.length === 0 && !loading) return (
-        <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto"> 
+        <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto">
             <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
             <p className="text-lg font-medium text-slate-700">Không tìm thấy sản phẩm nào</p>
             {selectedCategory && selectedCategory.name && selectedCategory.name !== 'Tất cả' ?
@@ -143,8 +152,8 @@ const ProductList = ({ selectedCategory }) => {
 
 
     return (
-        <div className="p-4 sm:p-6 bg-slate-50 font-['Inter',_sans-serif] min-h-screen">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"> 
+        <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-4 bg-slate-50 font-['Inter',_sans-serif] min-h-screen">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {paginatedProducts.map(product => (
                     <div
                         key={product.id}
@@ -153,7 +162,7 @@ const ProductList = ({ selectedCategory }) => {
                         <Link to={`/product/${product.id}`} className="flex flex-col h-full text-inherit no-underline">
                             <div className="relative">
                                 <div style={{ paddingTop: '135%' }} />
-                                    <div className="absolute inset-0 bg-[#f1f3f6] p-[20px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+                                    <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
                                         <img
                                             src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
                                             alt={product.name}
