@@ -1,4 +1,3 @@
-// src/components/SearchFilterBar.js
 import React, { useState, useEffect } from 'react';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 
@@ -6,8 +5,8 @@ const SearchFilterBar = ({
     onSearchChange,
     onSortChange,
     onApplyFilters,
-    currentFilters, // activeFilters từ context
-    availableGroups = [] // Danh sách các nhóm để lọc, mặc định là mảng rỗng
+    currentFilters, 
+    availableGroups = [] 
 }) => {
     const [localSearchTerm, setLocalSearchTerm] = useState('');
     const [localSortBy, setLocalSortBy] = useState('default');
@@ -15,7 +14,6 @@ const SearchFilterBar = ({
     const [editingFilters, setEditingFilters] = useState({});
 
     useEffect(() => {
-        // Khởi tạo hoặc cập nhật editingFilters khi currentFilters thay đổi hoặc khi form mở ra
         setEditingFilters(currentFilters || {});
     }, [showFilterInputs, currentFilters]);
 
@@ -56,10 +54,10 @@ const SearchFilterBar = ({
                     if (!isNaN(numValue)) {
                         newEditingFilters[filterKey] = numValue;
                     } else {
-                        delete newEditingFilters[filterKey]; // Xóa nếu không phải số hợp lệ
+                        delete newEditingFilters[filterKey]; 
                     }
                 } else {
-                    newEditingFilters[filterKey] = trimmedValue; // Lưu giá trị đã trim
+                    newEditingFilters[filterKey] = trimmedValue; 
                 }
             }
             return newEditingFilters;
@@ -70,7 +68,6 @@ const SearchFilterBar = ({
         if (onApplyFilters) {
             const filtersToApply = {};
             for (const key in editingFilters) {
-                // Chỉ gửi đi những filter có giá trị thực sự (không rỗng, không undefined)
                 if (editingFilters[key] !== null && editingFilters[key] !== undefined && String(editingFilters[key]).trim() !== '') {
                     filtersToApply[key] = editingFilters[key];
                 }
@@ -78,7 +75,6 @@ const SearchFilterBar = ({
             onApplyFilters(filtersToApply);
         }
         setShowFilterInputs(false);
-        // alert('Đã áp dụng filter!'); // Có thể bỏ alert để UX tốt hơn
     };
 
     const handleClearFilters = () => {
@@ -87,7 +83,6 @@ const SearchFilterBar = ({
             onApplyFilters({});
         }
         setShowFilterInputs(false);
-        // alert('Đã xóa tất cả filter!'); // Có thể bỏ alert
     };
 
     return (
@@ -173,7 +168,6 @@ const SearchFilterBar = ({
                                 </select>
                             </div>
                         )}
-                        {/* Thêm các input/select khác ở đây */}
                     </div>
                     <div className="flex justify-end items-center gap-3 pt-3 border-t border-gray-200">
                         <button onClick={handleClearFilters} className="text-sm text-gray-700 hover:text-gray-900 px-4 py-1.5 rounded-md border border-gray-300 hover:bg-gray-100 font-medium">

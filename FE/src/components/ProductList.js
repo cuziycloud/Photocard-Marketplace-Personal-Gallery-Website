@@ -180,6 +180,116 @@ const ProductList = () => {
         }
     };
 
+    const renderPaginationButtons = () => {
+        const pageNumbers = [];
+        const SIBLING_COUNT = 1; 
+        const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3; // Trang hiện tại + siblings + trang đầu/cuối + 2 dấu "..."
+        const SHOW_LEFT_ELLIPSIS = 'SHOW_LEFT_ELLIPSIS';
+        const SHOW_RIGHT_ELLIPSIS = 'SHOW_RIGHT_ELLIPSIS';
+
+        if (totalPages <= TOTAL_NUMBERS_TO_SHOW) {
+            for (let i = 1; i <= totalPages; i++) {
+                pageNumbers.push(i);
+            }
+        } else {
+            const leftSiblingIndex = Math.max(currentPage - SIBLING_COUNT, 1);
+            const rightSiblingIndex = Math.min(currentPage + SIBLING_COUNT, totalPages);
+
+            const shouldShowLeftEllipsis = leftSiblingIndex > 2; 
+            const shouldShowRightEllipsis = rightSiblingIndex < totalPages - 1; 
+
+            pageNumbers.push(1);
+
+            if (shouldShowLeftEllipsis) {
+                pageNumbers.push(SHOW_LEFT_ELLIPSIS);
+            }
+
+            // Các trang ở giữa (siblings)
+            for (let i = leftSiblingIndex; i <= rightSiblingIndex; i++) {
+                if (i > 1 && i < totalPages) { 
+                    if (!pageNumbers.includes(i)) {
+                         pageNumbers.push(i);
+                    }
+                }
+            }
+            if (shouldShowLeftEllipsis && leftSiblingIndex > 2 && !pageNumbers.includes(leftSiblingIndex)) {
+                
+            }
+
+
+            if (shouldShowRightEllipsis) {
+                 if (rightSiblingIndex < totalPages - 1 && !pageNumbers.includes(SHOW_RIGHT_ELLIPSIS)) {
+                    pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
+                 }
+            }
+            
+            if (totalPages > 1 && !pageNumbers.includes(totalPages)) {
+                 pageNumbers.push(totalPages);
+            }
+         
+            const cleanedPageNumbers = [];
+            let lastPushed = null;
+            for (const p of pageNumbers) {
+                if (typeof p === 'string' && p.startsWith('SHOW_') && typeof lastPushed === 'string' && lastPushed.startsWith('SHOW_')) {
+                    continue;
+                }
+                if (typeof p === 'number' && p === lastPushed) {
+                    continue;
+                }
+                if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2)) {
+                    continue;
+                }
+                if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1)) {
+                    continue;
+                }
+
+                cleanedPageNumbers.push(p);
+                lastPushed = p;
+            }
+            if (cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[0] === 1 && cleanedPageNumbers[2] === 2) {
+                cleanedPageNumbers.splice(1, 1); 
+            }
+            const lastIndex = cleanedPageNumbers.length -1;
+            if (cleanedPageNumbers[lastIndex-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIndex] === totalPages && cleanedPageNumbers[lastIndex-2] === totalPages -1) {
+                 cleanedPageNumbers.splice(lastIndex-1, 1); 
+            }
+
+
+            return cleanedPageNumbers.map((page, index) => {
+                if (page === SHOW_LEFT_ELLIPSIS || page === SHOW_RIGHT_ELLIPSIS) {
+                    return <span key={page + `-${index}`} className="px-2.5 py-2 text-slate-500 text-sm">...</span>;
+                }
+                return (
+                    <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors
+                            ${currentPage === page
+                                ? 'bg-pink-600 text-white border-pink-600'
+                                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                            }`}
+                    >
+                        {page}
+                    </button>
+                );
+            });
+        }
+
+        return pageNumbers.map(page => (
+            <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors
+                    ${currentPage === page
+                        ? 'bg-pink-600 text-white border-pink-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                    }`}
+            >
+                {page}
+            </button>
+        ));
+    };
+
     if (loading) { 
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
@@ -305,12 +415,29 @@ const ProductList = () => {
                     </div>
 
                     {totalPages > 1 && (
-                        <div className="mt-8 flex justify-center items-center space-x-1.5">
-                            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>Prev</button>
-                            <span> Page {currentPage} of {totalPages} </span>
-                            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>Next</button>
+                         <div className="mt-8 flex justify-center items-center space-x-1.5">
+                            <button
+                                onClick={() => goToPage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                aria-label="Previous Page"
+                            >
+                                <FaChevronLeft className="h-4 w-4" />
+                            </button>
+
+                            {renderPaginationButtons()}
+
+                            <button
+                                onClick={() => goToPage(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                aria-label="Next Page"
+                            >
+                                <FaChevronRight className="h-4 w-4" />
+                            </button>
                         </div>
                     )}
+
                 </>
             )}
         </div>
