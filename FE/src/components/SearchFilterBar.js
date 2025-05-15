@@ -34,7 +34,7 @@ const SearchFilterBar = ({ onSearchChange, onSortChange, onApplyFilters }) => {
     };
 
     return (
-        <div className="bg-white shadow-md py-4 px-6 sticky z-30" style={{ top: 'calc(4rem + 5rem)' }}>
+        <div className="bg-white py-4 px-6 sticky z-30 mb-3" style={{ top: 'calc(4rem + 5rem)' }}>
             <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4">
                 {/* Search Input */}
                 <form

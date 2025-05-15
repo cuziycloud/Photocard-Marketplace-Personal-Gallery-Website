@@ -9,7 +9,7 @@ const MainLayout = () => {
   const location = useLocation();
 
   const navbarHeight = '4rem';
-  const categoriesHeight = ['/'].includes(location.pathname) ? '1rem' : '5.5rem'; 
+  const categoriesHeight = ['/'].includes(location.pathname) ? '1.5rem' : '5.5rem'; 
   const paddingTop = `calc(${navbarHeight} + ${categoriesHeight})`;
 
   return (

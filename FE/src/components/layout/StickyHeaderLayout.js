@@ -17,7 +17,7 @@ const StickyHeaderLayout = () => {
   const [lastScrollY, setLastScrollY] = useState(window.scrollY);
 
   useEffect(() => {
-    const threshold = 120; 
+    const threshold = 110; 
     const handleScroll = () => {
         const currentScrollY = window.scrollY;
 
@@ -29,10 +29,8 @@ const StickyHeaderLayout = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-
-
 
 
   if (!shouldShowCategories && !shouldShowSearchBar) return null;
