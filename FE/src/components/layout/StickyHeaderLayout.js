@@ -38,7 +38,7 @@ const StickyHeaderLayout = () => {
 
   return (
     <div
-      className="bg-white shadow-sm sticky transition-transform duration-300"
+      className="bg-white shadow-sm sticky transition-transform duration-300 pt-4"
       style={{
         top: '4rem',
         zIndex: 30,

@@ -6,7 +6,7 @@ import { useCategory } from '../contexts/CategoryContext';
 import { useSearchFilter } from '../contexts/SearchFilterContext'; 
 
 const API_BASE_URL = 'http://localhost:8080/api';
-const PRODUCTS_PER_PAGE = 20;
+const PRODUCTS_PER_PAGE = 15;
 const MOCK_USER_ID = 2;
 
 const ProductList = () => {
@@ -315,7 +315,7 @@ const ProductList = () => {
     }
     
     return (
-        <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-4 bg-slate-100 font-['Inter',_sans-serif] min-h-screen">
+        <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 bg-white-100 font-['Inter',_sans-serif] min-h-screen">
             {isProcessing && !loading && ( 
                 <div className="text-center py-2">
                     <p className="text-sm text-slate-500">Đang cập nhật danh sách...</p>

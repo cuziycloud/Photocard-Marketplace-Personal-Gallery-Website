@@ -1,4 +1,3 @@
-// App.js
 import React from 'react'; 
 import { BrowserRouter as Router } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -13,7 +12,7 @@ function App() {
     <CategoryProvider>
       <SearchFilterProvider>
         <Router>
-          <div className="App flex flex-col min-h-screen">
+          <div className="bg-white dark:bg-gray-800 App flex flex-col min-h-screen">
             <Navbar />
             <MainLayout />
             <Footer />
