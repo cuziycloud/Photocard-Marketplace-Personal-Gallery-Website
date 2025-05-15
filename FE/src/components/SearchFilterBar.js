@@ -39,7 +39,7 @@ const SearchFilterBar = ({ onSearchChange, onSortChange, onApplyFilters }) => {
                 {/* Search Input */}
                 <form
                 onSubmit={handleSearchSubmit}
-                className="flex items-center w-full md:w-2/3 border border-gray-300 rounded-full overflow-hidden shadow-md transition-all duration-300 focus-within:ring-2 focus-within:ring-sky-400"
+                className="flex items-center w-full md:w-/3 border border-gray-300 rounded-full overflow-hidden shadow-md transition-all duration-300 focus-within:ring-2 focus-within:ring-sky-400"
                 >
                 <input
                     type="text"
@@ -77,7 +77,7 @@ const SearchFilterBar = ({ onSearchChange, onSortChange, onApplyFilters }) => {
                     </select>
                 </div>
 
-                {/* Filter */}
+                {/* Filter Button */}
                 <button
                     onClick={handleFilterClick}
                     className="flex items-center gap-1.5 text-sm text-sky-700 hover:text-white border border-sky-500 bg-white hover:bg-sky-500 rounded-full px-4 py-2 transition-colors duration-300"

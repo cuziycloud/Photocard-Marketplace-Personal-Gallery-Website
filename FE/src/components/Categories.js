@@ -166,6 +166,7 @@ const Categories = () => {
                     {showNavigationButtons && currentPage < totalPages - 1 && (
                         <button
                             onClick={handleNext}
+
                             className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white hover:bg-slate-100 transition-colors shadow-md border border-slate-200 flex items-center justify-center"
                             aria-label="Next categories"
                             style={{ width: '36px', height: '36px' }}
