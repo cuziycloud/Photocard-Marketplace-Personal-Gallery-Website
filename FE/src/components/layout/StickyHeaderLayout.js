@@ -1,4 +1,3 @@
-// components/layout/StickyHeaderLayout.js
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import Categories from '../Categories';
@@ -23,7 +22,7 @@ const StickyHeaderLayout = () => {
       )}
 
       {shouldShowCategories && shouldShowSearchBar && (
-        <div className="pb-2">
+        <div>
           <SearchFilterBar
             onSearchChange={searchFilterContextValue.setSearchTerm}
             onSortChange={searchFilterContextValue.setSortOption}
