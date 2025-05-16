@@ -18,14 +18,42 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
     setPreviewUrl(null);
     setError('');
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""; 
     }
   };
+
   useEffect(() => {
     if (isOpen) {
-        resetForm();
+      resetForm();
     }
   }, [isOpen]);
+
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
+        setImageFile(null);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        setError('Định dạng file không hợp lệ. Vui lòng chọn file JPEG, PNG, GIF, hoặc WEBP.');
+        setImageFile(null);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file)); 
+      setError('');
+    } else {
+      setImageFile(null);
+      setPreviewUrl(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,9 +78,9 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
         caption: caption,
         imageUrl: uploadMethod === 'link' ? imageUrl : null,
         imageFile: uploadMethod === 'file' ? imageFile : null,
-        uploadMethod: uploadMethod,
+        uploadMethod: uploadMethod, 
       };
-      await onSubmit(postData); 
+      await onSubmit(postData);
     } catch (apiError) {
       setError(apiError.response?.data?.message || apiError.message || 'Đã xảy ra lỗi khi tạo bài đăng.');
     } finally {
@@ -62,8 +90,9 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
 
   const handleInternalClose = () => {
     if (isSubmitting) return;
-    onClose();   
+    onClose();  
   };
+
 
   if (!isOpen) return null;
 
@@ -73,7 +102,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-indigo-700">Tạo Bài Đăng Mới</h2>
           <button
-            onClick={handleInternalClose} 
+            onClick={handleInternalClose}
             className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-gray-100 focus:outline-none"
             aria-label="Đóng modal"
             disabled={isSubmitting}
@@ -102,7 +131,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
               </button>
               <button
                 type="button"
-                onClick={() => { setUploadMethod('file'); setError(''); setImageUrl(''); }}
+                onClick={() => { setUploadMethod('file'); setError(''); setImageUrl(''); }} 
                 className={`relative -ml-px inline-flex items-center justify-center px-4 py-2.5 rounded-r-md border border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors w-1/2
                   ${uploadMethod === 'file' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
@@ -155,7 +184,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
                       type="file"
                       accept="image/jpeg,image/png,image/gif,image/webp"
                       className="sr-only"
-                      onChange={handleInternalClose}
+                      onChange={handleFileChange} 
                       ref={fileInputRef}
                       disabled={isSubmitting}
                     />
@@ -191,7 +220,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
           <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
-              onClick={handleInternalClose} 
+              onClick={handleInternalClose}
               className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
               disabled={isSubmitting}
             >
@@ -215,12 +244,8 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
         </form>
       </div>
-      <style jsx global>{`
-        @keyframes modalShow { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        .animate-modalShow { animation: modalShow 0.3s ease-out forwards; }
-      `}</style>
     </div>
   );
 };
 
-export default AddPostModal;
+export default AddPostModal;    

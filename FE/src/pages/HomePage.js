@@ -1,4 +1,3 @@
-// src/components/ProductList.js (hoặc đường dẫn tương ứng của bạn)
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaRegHeart, FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -10,7 +9,6 @@ const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 15;
 const MOCK_USER_ID = 2;
 
-// Hàm helper để xáo trộn mảng (Fisher-Yates shuffle algorithm)
 const shuffleArray = (array) => {
   if (!array || array.length === 0) return [];
   const newArray = [...array];
@@ -26,27 +24,23 @@ const ProductList = () => {
     const { searchTerm, sortOption, activeFilters, setSearchTerm, setActiveFilters: contextSetActiveFilters } = useSearchFilter();
 
     const [allFetchedProducts, setAllFetchedProducts] = useState([]);
-    // State mới để lưu trữ danh sách đã được xáo trộn một lần khi fetch
     const [shuffledInitialProducts, setShuffledInitialProducts] = useState([]);
     const [displayedProducts, setDisplayedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false); // Dùng cho filter/sort
+    const [isProcessing, setIsProcessing] = useState(false); 
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
     const navigate = useNavigate();
 
     const fetchProductsAndWishlistStatus = useCallback(async (currentGroupId) => {
-        console.log('ProductList: Fetching products with groupId:', currentGroupId);
-        // setLoading(true); // Sẽ được set bởi useEffect chính
-        // setError(null); // Sẽ được set bởi useEffect chính
         try {
             const params = { groupId: currentGroupId };
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, { params });
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
             
-            setAllFetchedProducts(fetchedProducts); // Lưu dữ liệu gốc
-            setShuffledInitialProducts(shuffleArray(fetchedProducts)); // Xáo trộn và lưu
+            setAllFetchedProducts(fetchedProducts); 
+            setShuffledInitialProducts(shuffleArray(fetchedProducts)); 
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
@@ -63,38 +57,32 @@ const ProductList = () => {
             } else {
                 setWishlistStatus({});
             }
-            setError(null); // Xóa lỗi nếu fetch thành công
+            setError(null); 
         } catch (err) {
             console.error("Error fetching products or wishlist status:", err);
             setError("Không thể tải danh sách sản phẩm.");
             setAllFetchedProducts([]);
-            setShuffledInitialProducts([]); // Reset cả mảng xáo trộn
+            setShuffledInitialProducts([]);
             setWishlistStatus({});
         } 
-        // finally { // setLoading(false) sẽ do useEffect chính xử lý
-        //     setLoading(false); 
-        // }
     }, [MOCK_USER_ID]);
 
     useEffect(() => {
-        setLoading(true); // Set loading khi bắt đầu fetch
-        setIsProcessing(true); // Cũng có thể set isProcessing ở đây
+        setLoading(true); 
+        setIsProcessing(true);
         const groupId = selectedCategory ? selectedCategory.id : null;
         fetchProductsAndWishlistStatus(groupId).finally(() => {
             setLoading(false);
-            // setIsProcessing(false) sẽ được set trong useEffect lọc/sắp xếp
         });
     }, [selectedCategory, fetchProductsAndWishlistStatus]);
 
-    // useEffect này sẽ xử lý việc lọc và sắp xếp từ `shuffledInitialProducts`
     useEffect(() => {
-        if (loading) { // Nếu đang fetch dữ liệu gốc, không làm gì cả
-            // setIsProcessing(true); // Vẫn có thể set isProcessing ở đây nếu muốn spinner khi fetch
+        if (loading) { 
             return;
         }
         
         setIsProcessing(true);
-        let productsToProcess = [...shuffledInitialProducts]; // Bắt đầu từ danh sách đã xáo trộn
+        let productsToProcess = [...shuffledInitialProducts]; 
 
         if (searchTerm && searchTerm.trim() !== '') {
             productsToProcess = productsToProcess.filter(product =>
@@ -120,19 +108,13 @@ const ProductList = () => {
                         case 'version':
                             return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
                         default:
-                            // console.warn(`ProductList: Unknown filter key: ${filterKey}`); // Bỏ console log này
                             return true;
                     }
                 });
             });
         }
 
-        // Sắp xếp theo sortOption
-        // QUAN TRỌNG: Nếu sortOption là 'default' hoặc một giá trị không xác định,
-        // thì productsToProcess sẽ giữ nguyên thứ tự đã xáo trộn từ shuffledInitialProducts.
-        // Nếu sortOption là 'newest', nó sẽ sắp xếp lại dựa trên ID, mất đi tính ngẫu nhiên.
-        // Nếu muốn 'newest' mà vẫn ngẫu nhiên, bạn cần một logic khác hoặc không xáo trộn nếu chọn 'newest'.
-        if (sortOption !== 'default') { // Chỉ sắp xếp nếu không phải là 'default' (hoặc một giá trị bạn dùng để chỉ "giữ nguyên xáo trộn")
+        if (sortOption !== 'default') { 
             switch (sortOption) {
                 case 'price-asc':
                     productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity));
@@ -146,19 +128,16 @@ const ProductList = () => {
                 case 'name-desc':
                     productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
                     break;
-                case 'newest': // Sắp xếp theo ID sẽ làm mất thứ tự ngẫu nhiên
+                case 'newest':
                     productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0));
                     break;
-                // default: // Nếu không có default, nó sẽ giữ nguyên thứ tự từ productsToProcess (đã xáo trộn)
-                //     break; 
             }
         }
         
-        // console.log("Output - DisplayedProducts count:", productsToProcess.length); // Bỏ console log
         setDisplayedProducts(productsToProcess);
         setCurrentPage(1);
         setIsProcessing(false);
-    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading]); // Thêm loading
+    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading]); 
 
     const handleResetFiltersAndSearch = () => {
         setSearchTerm('');
@@ -171,7 +150,6 @@ const ProductList = () => {
             return;
         }
         const isInWishlist = wishlistStatus[productId];
-        // Không cần setIsProcessing ở đây vì việc update icon wishlist là nhanh
         try {
             if (isInWishlist) {
                 await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`);
@@ -193,16 +171,8 @@ const ProductList = () => {
             alert("Sản phẩm này đã hết hàng!");
             return;
         }
-        console.log("Added to cart (simulated):", product.name, product.id);
         alert(`Đã thêm "${product.name}" vào giỏ hàng (mô phỏng).`);
     };
-
-    // handleViewDetailsSeparate không cần thiết nếu Link đã dùng navigate
-    // const handleViewDetailsSeparate = (productId, e) => {
-    //     e.preventDefault();
-    //     e.stopPropagation();
-    //     navigate(`/product/${productId}`);
-    // };
 
     const totalPages = Math.ceil(displayedProducts.length / PRODUCTS_PER_PAGE);
     const paginatedProducts = displayedProducts.slice(
@@ -213,12 +183,9 @@ const ProductList = () => {
     const goToPage = (page) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
-            // Tùy chọn: cuộn lên đầu trang khi chuyển trang
-            // window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
-    // Phần renderPaginationButtons giữ nguyên như code gốc của bạn
     const renderPaginationButtons = () => {
         const pageNumbers = [];
         const SIBLING_COUNT = 1;
@@ -294,8 +261,6 @@ const ProductList = () => {
         ));
     };
 
-
-    // JSX giữ nguyên như code gốc của bạn
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
@@ -355,7 +320,7 @@ const ProductList = () => {
                             >
                                 <Link to={`/product/${product.id}`} className="flex flex-col h-full text-inherit no-underline">
                                     <div className="relative">
-                                        <div style={{ paddingTop: '135%' }} /> {/* Giữ tỷ lệ ảnh */}
+                                        <div style={{ paddingTop: '135%' }} /> 
                                             <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
                                                 <img
                                                     src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
@@ -391,7 +356,7 @@ const ProductList = () => {
 
                                     <div className="p-3.5 flex-grow flex flex-col justify-between">
                                         <div>
-                                            {product.group && ( // Kiểm tra product.group trước khi truy cập product.group.name
+                                            {product.group && (
                                                 <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
                                             )}
                                             <h3

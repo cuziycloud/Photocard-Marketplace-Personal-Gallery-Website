@@ -1,4 +1,3 @@
-// src/contexts/SearchFilterContext.js
 import React, { createContext, useState, useContext } from 'react';
 
 const SearchFilterContext = createContext();
@@ -12,20 +11,9 @@ export const SearchFilterProvider = ({ children }) => {
 
     const handleSetSearchTerm = (term) => setSearchTerm(term);
     const handleSetSortOption = (option) => setSortOption(option);
-
-    // Sửa lại hàm này:
     const handleSetActiveFilters = (newFilters) => {
         setActiveFilters(newFilters);
     };
-    // Hoặc nếu bạn vẫn muốn merge, nhưng có cách để xóa:
-    // const handleSetActiveFilters = (filtersToUpdate, replaceAll = false) => {
-    //     if (replaceAll) {
-    //         setActiveFilters(filtersToUpdate);
-    //     } else {
-    //         setActiveFilters(prev => ({ ...prev, ...filtersToUpdate }));
-    //     }
-    // };
-    // Và khi xóa hết: onApplyFilters({}, true);
 
     const value = {
         searchTerm,
@@ -33,7 +21,7 @@ export const SearchFilterProvider = ({ children }) => {
         activeFilters,
         setSearchTerm: handleSetSearchTerm,
         setSortOption: handleSetSortOption,
-        setActiveFilters: handleSetActiveFilters, // Sử dụng hàm đã sửa
+        setActiveFilters: handleSetActiveFilters, 
     };
 
     return (

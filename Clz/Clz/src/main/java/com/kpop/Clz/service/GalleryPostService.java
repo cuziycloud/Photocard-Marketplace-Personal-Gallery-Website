@@ -29,7 +29,7 @@ public class GalleryPostService {
         newPost.setImageUrl(postDataFromRequest.getImageUrl());
         newPost.setCaption(postDataFromRequest.getCaption());
         newPost.setPostedByUsername(postDataFromRequest.getPostedByUsername() != null ? postDataFromRequest.getPostedByUsername() : "Demo User");
-        newPost.setPostedByAvatarUrl(postDataFromRequest.getPostedByAvatarUrl() != null ? postDataFromRequest.getPostedByAvatarUrl() : "https://i.pravatar.cc/150?u=demo");
+        newPost.setPostedByAvatarUrl(postDataFromRequest.getPostedByAvatarUrl() != null ? postDataFromRequest.getPostedByAvatarUrl() : "https://i.pinimg.com/736x/fa/fa/06/fafa063bab258267192f667bb81c3040.jpg");
 
         newPost.setLikesCount(0);
         newPost.setCommentsCount(0);
