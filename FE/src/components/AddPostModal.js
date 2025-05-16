@@ -1,15 +1,16 @@
-import React, { useState, useRef } from 'react'; 
+import React, { useState, useRef, useEffect } from 'react';
 import { FaTimes, FaImage, FaLink, FaUpload } from 'react-icons/fa';
 
 const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
   const [caption, setCaption] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null); 
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadMethod, setUploadMethod] = useState('link');
   const fileInputRef = useRef(null);
+
   const resetForm = () => {
     setCaption('');
     setImageUrl('');
@@ -20,6 +21,11 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
       fileInputRef.current.value = "";
     }
   };
+  useEffect(() => {
+    if (isOpen) {
+        resetForm();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,7 +52,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
         imageFile: uploadMethod === 'file' ? imageFile : null,
         uploadMethod: uploadMethod,
       };
-      await onSubmit(postData);
+      await onSubmit(postData); 
     } catch (apiError) {
       setError(apiError.response?.data?.message || apiError.message || 'Đã xảy ra lỗi khi tạo bài đăng.');
     } finally {
@@ -54,36 +60,9 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  const handleClose = () => {
+  const handleInternalClose = () => {
     if (isSubmitting) return;
-    resetForm();
-    onClose();
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { 
-        setError('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
-        setImageFile(null);
-        setPreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-        setError('Định dạng file không hợp lệ. Vui lòng chọn file JPEG, PNG, GIF, hoặc WEBP.');
-        setImageFile(null);
-        setPreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setError(''); 
-    } else {
-      setImageFile(null);
-      setPreviewUrl(null);
-    }
+    onClose();   
   };
 
   if (!isOpen) return null;
@@ -94,7 +73,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-indigo-700">Tạo Bài Đăng Mới</h2>
           <button
-            onClick={handleClose}
+            onClick={handleInternalClose} 
             className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-gray-100 focus:outline-none"
             aria-label="Đóng modal"
             disabled={isSubmitting}
@@ -176,7 +155,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
                       type="file"
                       accept="image/jpeg,image/png,image/gif,image/webp"
                       className="sr-only"
-                      onChange={handleFileChange}
+                      onChange={handleInternalClose}
                       ref={fileInputRef}
                       disabled={isSubmitting}
                     />
@@ -212,7 +191,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
           <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={handleInternalClose} 
               className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
               disabled={isSubmitting}
             >
@@ -221,7 +200,7 @@ const AddPostModal = ({ isOpen, onClose, onSubmit }) => {
             <button
               type="submit"
               className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-150 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed"
-              disabled={isSubmitting || (uploadMethod === 'file' && !imageFile && !previewUrl) || (uploadMethod === 'link' && !imageUrl) } // Disable nếu chưa chọn file/link
+              disabled={isSubmitting || (uploadMethod === 'file' && !imageFile) || (uploadMethod === 'link' && !imageUrl) }
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">

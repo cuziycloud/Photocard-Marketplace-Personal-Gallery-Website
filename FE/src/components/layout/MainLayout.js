@@ -1,8 +1,8 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import ProductList from '../ProductList';
-import MyCollectionPage from '../MyCollectionPage';
-import WishlistPage from '../WishlistPage';
+import ProductList from '../../pages/HomePage';
+import MyCollectionPage from '../../pages/MyCollectionPage';
+import WishlistPage from '../../pages/WishlistPage';
 import StickyHeaderLayout from './StickyHeaderLayout';
 import GalleryPage from '../../pages/GalleryPage';
 
