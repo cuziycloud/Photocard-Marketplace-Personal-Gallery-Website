@@ -56,8 +56,12 @@ const Navbar = () => {
                             onClick={closeMobileMenu}
                             className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-green-500 transition-colors`}
                         >
-                            <FaMusic className={`h-10 w-10 mr-2 transition-colors ${isScrolled || isMobileMenuOpen ? 'text-green-400' : 'text-green-600 group-hover:text-green-500'}`} />
-                            <span className="font-bold text-2xl">K-Clz</span>
+                            <img
+                            src="/assets/img/bite.png"
+                            alt="Logo"
+                            className="h-10 w-10 mr-2 object-contain transition-transform duration-300 group-hover:scale-110"
+                            />
+                            <span className="font-bold text-2xl tracking-wide">K-Clz</span>
                         </Link>
                     </div>
 

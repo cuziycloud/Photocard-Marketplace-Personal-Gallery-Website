@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="assets/img/happy-face.png" /> 
+    <link rel="icon" href="assets/img/dinosaur.png" /> 
     <!-- https://www.flaticon.com/icons -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#ff69b4" />
@@ -18,13 +18,12 @@
     <script>
       (function() {
         function getInitialTheme() {
-          try { // Thêm try-catch để xử lý trường hợp localStorage không khả dụng (ví dụ: private browsing)
+          try { 
             const storedPrefs = window.localStorage.getItem('color-theme');
             if (typeof storedPrefs === 'string') {
               return storedPrefs;
             }
           } catch (e) {
-            // localStorage không khả dụng, bỏ qua
           }
           const userMedia = window.matchMedia('(prefers-color-scheme: dark)');
           if (userMedia.matches) {

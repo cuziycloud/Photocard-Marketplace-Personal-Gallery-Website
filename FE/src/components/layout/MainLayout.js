@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import ProductList from '../ProductList';
-import MyCollectionPage from '../MyCollection';
+import MyCollectionPage from '../MyCollectionPage';
 import WishlistPage from '../WishlistPage';
 import StickyHeaderLayout from './StickyHeaderLayout';
 import GalleryPage from '../../pages/GalleryPage';
@@ -10,7 +10,7 @@ const MainLayout = () => {
   const location = useLocation();
 
   const navbarHeight = '4rem';
-  const categoriesHeight = ['/'].includes(location.pathname) ? '1.5rem' : '0rem'; 
+  const categoriesHeight = ['/'].includes(location.pathname) ? '1.5rem' : '0.25rem'; 
   const paddingTop = `calc(${navbarHeight} + ${categoriesHeight})`;
 
   return (
