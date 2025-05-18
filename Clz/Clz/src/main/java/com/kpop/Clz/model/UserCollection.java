@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.util.Date; // Hoặc java.time.LocalDateTime
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.util.Date;
 
 @Entity
 @Table(name = "user_collections")
@@ -26,13 +28,14 @@ public class UserCollection {
     @JoinColumn(name = "product_id", referencedColumnName = "id")
     private Product product;
 
-    @Column(name = "collected_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @CreationTimestamp
+    @Column(name = "collected_at", nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date collectedAt;
 
     public UserCollection(User user, Product product) {
+        this.id = new UserCollectionId(user.getId(), product.getId());
         this.user = user;
         this.product = product;
-        this.id = new UserCollectionId(user.getId(), product.getId());
     }
 }
