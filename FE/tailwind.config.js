@@ -7,8 +7,8 @@ module.exports = {
   theme: {
     extend: {},
     animation: {
-      modalBgShow: 'modalBgShow 0.001s ease-out forwards',
-      modalContentShow: 'modalContentShow 0.001s 0.001s ease-out forwards'
+      modalBgShow: 'modalBgShow 0.1s ease-out forwards',
+      modalContentShow: 'modalContentShow 0.1s 0.2s ease-out forwards'
     }
   },
   

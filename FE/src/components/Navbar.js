@@ -80,9 +80,9 @@ const Navbar = () => {
                             <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Wishlist
                             </NavLink>
-                            <NavLink to="/bubble" className={navLinkClasses} onClick={closeMobileMenu}>
+                            {/* <NavLink to="/bubble" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Bubble
-                            </NavLink>
+                            </NavLink> */}
                         </div>
                     </div>
 
