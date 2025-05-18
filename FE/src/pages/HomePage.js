@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; 
 import { FaRegHeart, FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import axios from 'axios';
 import { useCategory } from '../contexts/CategoryContext';
 import { useSearchFilter } from '../contexts/SearchFilterContext';
+import ProductDetailModal from '../components/ProductDetailModal'; 
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 15;
@@ -32,6 +33,20 @@ const ProductList = () => {
     const [wishlistStatus, setWishlistStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
     const navigate = useNavigate();
+
+    const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+
+    useEffect(() => {
+        if (selectedProductForModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [selectedProductForModal]);
+
 
     const fetchProductsAndWishlistStatus = useCallback(async (currentGroupId) => {
         try {
@@ -165,14 +180,26 @@ const ProductList = () => {
     };
 
     const handleAddToCart = (product, e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        
         if (product.stockQuantity === 0) {
             alert("Sản phẩm này đã hết hàng!");
             return;
         }
-        alert(`Đã thêm "${product.name}" vào giỏ hàng (mô phỏng).`);
+        if (selectedProductForModal && selectedProductForModal.id === product.id) {
+            handleCloseModal();
+        }
     };
+
+    const handleOpenProductModal = (product) => {
+        setSelectedProductForModal(product);
+    };
+
+    const handleCloseModal = () => {
+        setSelectedProductForModal(null);
+    };
+
 
     const totalPages = Math.ceil(displayedProducts.length / PRODUCTS_PER_PAGE);
     const paginatedProducts = displayedProducts.slice(
@@ -189,55 +216,87 @@ const ProductList = () => {
     const renderPaginationButtons = () => {
         const pageNumbers = [];
         const SIBLING_COUNT = 1;
-        const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3;
+        const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3; 
         const SHOW_LEFT_ELLIPSIS = 'SHOW_LEFT_ELLIPSIS';
         const SHOW_RIGHT_ELLIPSIS = 'SHOW_RIGHT_ELLIPSIS';
 
-        if (totalPages <= TOTAL_NUMBERS_TO_SHOW) {
+        if (totalPages <= TOTAL_NUMBERS_TO_SHOW) { 
             for (let i = 1; i <= totalPages; i++) {
                 pageNumbers.push(i);
             }
-        } else {
+        } else { 
             const leftSiblingIndex = Math.max(currentPage - SIBLING_COUNT, 1);
             const rightSiblingIndex = Math.min(currentPage + SIBLING_COUNT, totalPages);
-            const shouldShowLeftEllipsis = leftSiblingIndex > 2;
-            const shouldShowRightEllipsis = rightSiblingIndex < totalPages - 1;
 
-            pageNumbers.push(1);
+            const shouldShowLeftEllipsis = leftSiblingIndex > 2; 
+            const shouldShowRightEllipsis = rightSiblingIndex < totalPages - 1; 
+
+            pageNumbers.push(1); 
+
             if (shouldShowLeftEllipsis) {
                 pageNumbers.push(SHOW_LEFT_ELLIPSIS);
             }
-            for (let i = leftSiblingIndex; i <= rightSiblingIndex; i++) {
-                if (i > 1 && i < totalPages && !pageNumbers.includes(i)) {
-                     pageNumbers.push(i);
+
+            let startPageForRange = leftSiblingIndex;
+            if (shouldShowLeftEllipsis && startPageForRange === 2) startPageForRange++; 
+            
+            let endPageForRange = rightSiblingIndex;
+            if (shouldShowRightEllipsis && endPageForRange === totalPages -1) endPageForRange--; 
+
+            for (let i = startPageForRange; i <= endPageForRange; i++) {
+                if (i > 1 && i < totalPages) { 
+                     if(!pageNumbers.includes(i)) pageNumbers.push(i);
                 }
             }
-            if (shouldShowRightEllipsis && rightSiblingIndex < totalPages -1 && !pageNumbers.includes(SHOW_RIGHT_ELLIPSIS)) {
-                 pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
+            
+            if (shouldShowRightEllipsis) {
+                if (pageNumbers[pageNumbers.length-1] !== totalPages -1) {
+                     pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
+                }
             }
-            if (totalPages > 1 && !pageNumbers.includes(totalPages)) {
+
+            if (totalPages > 1 && !pageNumbers.includes(totalPages)) { 
                  pageNumbers.push(totalPages);
             }
+            
             const cleanedPageNumbers = [];
             let lastPushed = null;
             for (const p of pageNumbers) {
-                if (typeof p === 'string' && p.startsWith('SHOW_') && typeof lastPushed === 'string' && lastPushed.startsWith('SHOW_')) continue;
-                if (typeof p === 'number' && p === lastPushed) continue;
-                if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2)) continue;
-                if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1)) continue;
+                if (typeof p === 'string' && p.startsWith('SHOW_') && typeof lastPushed === 'string' && lastPushed.startsWith('SHOW_')) continue; // consecutive ellipsis
+                if (typeof p === 'number' && p === lastPushed) continue; 
+                
+                if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2) && cleanedPageNumbers[cleanedPageNumbers.length-1] === 1) {
+                    const lastNumIndex = cleanedPageNumbers.lastIndexOf(1);
+                    if (pageNumbers.includes(2) && pageNumbers.indexOf(2) === pageNumbers.indexOf(p) + 1) {
+                         cleanedPageNumbers.push(2);
+                         lastPushed = 2;
+                         continue;
+                    }
+                }
+                 if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1) && cleanedPageNumbers[cleanedPageNumbers.length-1] === totalPages -1) {
+                     if (pageNumbers.includes(totalPages) && pageNumbers.indexOf(totalPages) === pageNumbers.indexOf(p) + 1) {
+                         lastPushed = p; 
+                         continue;
+                     }
+                 }
+
                 cleanedPageNumbers.push(p);
                 lastPushed = p;
             }
-            if (cleanedPageNumbers.length > 1 && cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[0] === 1 && cleanedPageNumbers[2] === 2) {
-                cleanedPageNumbers.splice(1, 1);
+            if (cleanedPageNumbers.length > 2) {
+                if (cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[2] === 2) {
+                    cleanedPageNumbers.splice(1, 1); 
+                }
+                const lastIdx = cleanedPageNumbers.length -1;
+                if (cleanedPageNumbers[lastIdx-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIdx-2] === totalPages -1) {
+                     cleanedPageNumbers.splice(lastIdx-1, 1);
+                }
             }
-            const lastIdx = cleanedPageNumbers.length -1;
-            if (cleanedPageNumbers.length > 2 && cleanedPageNumbers[lastIdx-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIdx] === totalPages && cleanedPageNumbers[lastIdx-2] === totalPages -1) {
-                 cleanedPageNumbers.splice(lastIdx-1, 1);
-            }
+
+
             return cleanedPageNumbers.map((page, index) => {
                 if (page === SHOW_LEFT_ELLIPSIS || page === SHOW_RIGHT_ELLIPSIS) {
-                    return <span key={page + `-${index}`} className="px-2.5 py-2 text-slate-500 text-sm">...</span>;
+                    return <span key={page + `-${index}`} className="px-2 py-2 text-slate-500 text-sm">...</span>;
                 }
                 return (
                     <button
@@ -249,7 +308,10 @@ const ProductList = () => {
                     </button>
                 );
             });
+
         }
+
+
         return pageNumbers.map(page => (
             <button
                 key={page}
@@ -260,6 +322,7 @@ const ProductList = () => {
             </button>
         ));
     };
+
 
     if (loading) {
         return (
@@ -317,70 +380,72 @@ const ProductList = () => {
                             <div
                                 key={product.id}
                                 className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
+                                onClick={() => handleOpenProductModal(product)} 
+                                style={{cursor: 'pointer'}} 
                             >
-                                <Link to={`/product/${product.id}`} className="flex flex-col h-full text-inherit no-underline">
-                                    <div className="relative">
-                                        <div style={{ paddingTop: '135%' }} /> 
-                                            <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
-                                                <img
-                                                    src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                    alt={product.name}
-                                                    className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                                                />
-                                            </div>
-
-                                        <button
-                                            className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
-                                            onClick={(e) => {
-                                                e.preventDefault(); e.stopPropagation();
-                                                toggleWishlist(product.id, product.name);
-                                            }}
-                                            aria-label={wishlistStatus[product.id] ? "Remove from Wishlist" : "Add to Wishlist"}
-                                        >
-                                            {wishlistStatus[product.id]
-                                                ? <FaHeart className="w-4 h-4 text-pink-500" />
-                                                : <FaRegHeart className="w-4 h-4" />}
-                                        </button>
-
-                                        <button
-                                            className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500
-                                                ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                                            `}
-                                            onClick={(e) => handleAddToCart(product, e)}
-                                            aria-label="Add to Cart"
-                                            disabled={product.stockQuantity === 0}
-                                        >
-                                            <FaShoppingCart className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="p-3.5 flex-grow flex flex-col justify-between">
-                                        <div>
-                                            {product.group && (
-                                                <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
-                                            )}
-                                            <h3
-                                                className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]"
-                                                title={product.name}
-                                            >
-                                                {product.name}
-                                            </h3>
-                                            {product.version && (
-                                                <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
-                                            )}
+                                <div className="relative">
+                                    <div style={{ paddingTop: '135%' }} /> 
+                                        <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+                                            <img
+                                                src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                alt={product.name}
+                                                className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+                                            />
                                         </div>
-                                        <div className="mt-2.5">
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-md font-bold text-pink-600">
-                                                    ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
-                                                </p>
-                                                <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                    {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
-                                                </p>
-                                            </div>
+
+                                    <button
+                                        className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleWishlist(product.id, product.name);
+                                        }}
+                                        aria-label={wishlistStatus[product.id] ? "Remove from Wishlist" : "Add to Wishlist"}
+                                    >
+                                        {wishlistStatus[product.id]
+                                            ? <FaHeart className="w-4 h-4 text-pink-500" />
+                                            : <FaRegHeart className="w-4 h-4" />}
+                                    </button>
+
+                                    <button
+                                        className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500
+                                            ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                                        `}
+                                        onClick={(e) => {
+                                            handleAddToCart(product, e);
+                                        }}
+                                        aria-label="Add to Cart"
+                                        disabled={product.stockQuantity === 0}
+                                    >
+                                        <FaShoppingCart className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div className="p-3.5 flex-grow flex flex-col justify-between">
+                                    <div>
+                                        {product.group && (
+                                            <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
+                                        )}
+                                        <h3
+                                            className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]"
+                                            title={product.name}
+                                        >
+                                            {product.name}
+                                        </h3>
+                                        {product.version && (
+                                            <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
+                                        )}
+                                    </div>
+                                    <div className="mt-2.5">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-md font-bold text-pink-600">
+                                                ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
+                                            </p>
+                                            <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
+                                            </p>
                                         </div>
                                     </div>
-                                </Link>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -410,8 +475,18 @@ const ProductList = () => {
                     )}
                 </>
             )}
+
+            {selectedProductForModal && (
+                <ProductDetailModal
+                    product={selectedProductForModal}
+                    onClose={handleCloseModal}
+                    onAddToCart={handleAddToCart}
+                    wishlistStatus={wishlistStatus[selectedProductForModal.id]}
+                    onToggleWishlist={toggleWishlist}
+                />
+            )}
         </div>
+    
     );
 };
-
 export default ProductList;
