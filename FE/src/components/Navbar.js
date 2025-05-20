@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { FaMusic, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
 import { useCart } from '../contexts/CartContext';
+import UserMenu from './UserMenu';
+
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -92,13 +94,16 @@ const Navbar = () => {
                     <div className="hidden md:flex items-center space-x-4">
                         <Link to="/cart" aria-label="Cart" className={`${actionButtonClasses} relative`}>
                             <FaShoppingCart className="h-6 w-6" />
-                            { !loadingCart && cartItemCount > 0 && ( // Kiểm tra loadingCart để tránh hiển thị số 0 tạm thời
+                            {!loadingCart && cartItemCount > 0 && (
                                 <span className="absolute -top-0.5 -right-0.5 px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
                                     {cartItemCount}
                                 </span>
                             )}
                         </Link>
+                        
+                        <UserMenu isDark={isScrolled || isMobileMenuOpen} />
                     </div>
+
 
                     {/* Mobile Menu Button */}
                     <div className="md:hidden flex items-center">

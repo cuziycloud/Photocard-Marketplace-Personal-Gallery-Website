@@ -11,39 +11,26 @@ const StickyHeaderLayout = () => {
     searchTerm, 
     sortOption, 
     activeFilters, 
-    setSearchTerm = () => {}, 
+    setSearchTerm = () => {},
     setSortOption = () => {}, 
     setActiveFilters = () => {} 
   } = searchFilterContextValue || {};
 
-  const pagesWithoutCategories = [
+  const pagesWithoutStickyContent = [
     '/wishlist', 
     '/card', 
     '/collection', 
     '/gallery', 
     '/bubble',
-    '/cart'   
+    '/cart',
+    '/admin/add-product'
   ];
   
-  const shouldShowCategories = !pagesWithoutCategories.includes(location.pathname.toLowerCase());
-  const shouldShowSearchBar = location.pathname === '/';
+  const isAdminPage = location.pathname.toLowerCase().startsWith('/admin/');
+  const shouldShowCategories = !isAdminPage && !pagesWithoutStickyContent.includes(location.pathname.toLowerCase());
+  const shouldShowSearchBar = !isAdminPage && location.pathname === '/'; 
 
   const [showHeader, setShowHeader] = useState(true);
-
-  useEffect(() => {
-    const threshold = 110;
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > threshold) {
-        setShowHeader(false);
-      } else {
-        setShowHeader(true);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []); 
 
   if (!shouldShowCategories && !shouldShowSearchBar) {
     return null;
@@ -51,7 +38,7 @@ const StickyHeaderLayout = () => {
 
   return (
     <div
-      className="bg-white shadow-sm sticky transition-transform duration-300 pt-4"
+      className="bg-white shadow-sm sticky transition-transform duration-300 pt-4" 
       style={{
         top: '4rem', 
         zIndex: 30,
@@ -59,7 +46,6 @@ const StickyHeaderLayout = () => {
       }}
     >
       {shouldShowCategories && <Categories />}
-
       {shouldShowSearchBar && (
         <SearchFilterBar
           onSearchChange={setSearchTerm}
