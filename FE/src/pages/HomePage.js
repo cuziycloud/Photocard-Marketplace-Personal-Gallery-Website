@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     FaRegHeart,
     FaHeart,
     FaShoppingCart,
     FaChevronLeft,
     FaChevronRight,
-    FaPlusSquare,
-    FaCheckSquare
+    FaPlusSquare,     
+    FaCheckSquare,    
+    FaSpinner         
 } from 'react-icons/fa';
 import axios from 'axios';
 import { useCategory } from '../contexts/CategoryContext';
 import { useSearchFilter } from '../contexts/SearchFilterContext';
-import { useCart } from '../contexts/CartContext'; 
+import { useCart } from '../contexts/CartContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 15;
-const MOCK_USER_ID = 2; 
+const MOCK_USER_ID = 2;
 
 const shuffleArray = (array) => {
   if (!array || array.length === 0) return [];
@@ -32,20 +32,20 @@ const shuffleArray = (array) => {
 const HomePage = () => {
     const { selectedCategory } = useCategory();
     const { searchTerm, sortOption, activeFilters, setSearchTerm, setActiveFilters: contextSetActiveFilters } = useSearchFilter();
-    const { addToCart, addingToCart: cartAddingStatus, cartError } = useCart();
+    const { addToCart, addingToCart: cartAddingStatus, cartError: cartContextError } = useCart();
 
     const [allFetchedProducts, setAllFetchedProducts] = useState([]);
-    const [shuffledInitialProducts, setShuffledInitialProducts] = useState([]);
+    const [shuffledInitialProducts, setShuffledInitialProducts] = useState([]); 
     const [displayedProducts, setDisplayedProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
+
+    const [loading, setLoading] = useState(true);       
+    const [isProcessing, setIsProcessing] = useState(false); 
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
-    const [collectionStatus, setCollectionStatus] = useState({});
+    const [collectionStatus, setCollectionStatus] = useState({}); 
     const [currentPage, setCurrentPage] = useState(1);
-    const navigate = useNavigate(); 
     const [selectedProductForModal, setSelectedProductForModal] = useState(null);
-    const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null }); 
+    const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null });
 
     useEffect(() => {
         if (selectedProductForModal) {
@@ -60,210 +60,222 @@ const HomePage = () => {
 
     const fetchProductsAndAllStatuses = useCallback(async (currentGroupId) => {
         setLoading(true); 
-        setIsProcessing(true);
+        setError(null);
+        setAllFetchedProducts([]);
+        setShuffledInitialProducts([]);
+
         try {
             const params = currentGroupId ? { groupId: currentGroupId } : {};
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, { params });
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
 
             setAllFetchedProducts(fetchedProducts);
-            setShuffledInitialProducts(shuffleArray(fetchedProducts)); 
+            setShuffledInitialProducts(shuffleArray(fetchedProducts));
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
-                const newWishlistStatus = {};
-                const newCollectionStatus = {};
+                const wishlistPromises = productIds.map(productId =>
+                    axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`)
+                        .then(res => ({ [productId]: res.data.isInWishlist }))
+                        .catch(() => ({ [productId]: false }))
+                );
+                const collectionPromises = productIds.map(productId =>
+                    axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/check/${productId}`)
+                        .then(res => ({ [productId]: res.data.isInCollection }))
+                        .catch(() => ({ [productId]: false }))
+                );
+                
+                const [wishlistResults, collectionResults] = await Promise.all([
+                    Promise.all(wishlistPromises),
+                    Promise.all(collectionPromises)
+                ]);
 
-                await Promise.all(productIds.map(async (productId) => {
-                    try {
-                        const statusResponse = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`);
-                        newWishlistStatus[productId] = statusResponse.data.isInWishlist;
-                    } catch (checkErr) {
-                        newWishlistStatus[productId] = false;
-                    }
-                    try {
-                        const collectionResp = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/check/${productId}`);
-                        newCollectionStatus[productId] = collectionResp.data.isInCollection;
-                    } catch (checkErr) {
-                        newCollectionStatus[productId] = false;
-                    }
-                }));
-                setWishlistStatus(newWishlistStatus);
-                setCollectionStatus(newCollectionStatus);
+                setWishlistStatus(Object.assign({}, ...wishlistResults));
+                setCollectionStatus(Object.assign({}, ...collectionResults));
             } else {
                 setWishlistStatus({});
                 setCollectionStatus({});
             }
-            setError(null);
         } catch (err) {
             console.error("Error fetching products or statuses:", err);
             setError("Không thể tải danh sách sản phẩm hoặc trạng thái.");
+
             setAllFetchedProducts([]);
             setShuffledInitialProducts([]);
             setWishlistStatus({});
             setCollectionStatus({});
         } finally {
-
+            
         }
-    }, [MOCK_USER_ID]); 
+    }, [MOCK_USER_ID]);
 
     useEffect(() => {
+        setLoading(true);    
+        setIsProcessing(true); 
         const groupId = selectedCategory ? selectedCategory.id : null;
-        fetchProductsAndAllStatuses(groupId);
-    }, [selectedCategory, fetchProductsAndAllStatuses]); 
+        fetchProductsAndAllStatuses(groupId)
+            .finally(() => {
+                
+            });
+    }, [selectedCategory, fetchProductsAndAllStatuses]);
 
     useEffect(() => {
-        if (allFetchedProducts.length === 0 && !loading && !error) { 
-            setDisplayedProducts([]);
-            setIsProcessing(false);
-            setLoading(false); 
-            return;
-        }
-
-        if (shuffledInitialProducts.length === 0 && allFetchedProducts.length > 0) {
-            setIsProcessing(false);
-            setLoading(false);
-            return;
+        if (loading) { 
+            setIsProcessing(true);    
         }
         
-        if (shuffledInitialProducts.length > 0) {
-            setIsProcessing(true);
-            let productsToProcess = [...shuffledInitialProducts];
+        let productsToProcess = shuffleArray([...allFetchedProducts]);
+        // No shuffle: let productsToProcess = [...allFetchedProducts];
 
-            if (searchTerm && searchTerm.trim() !== '') {
-                productsToProcess = productsToProcess.filter(product =>
-                    (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                    (product.group?.name && product.group.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                );
-            }
-
-            if (Object.keys(activeFilters).length > 0) {
-                productsToProcess = productsToProcess.filter(product => {
-                    return Object.entries(activeFilters).every(([filterKey, filterValue]) => {
-                        if (filterValue === null || filterValue === undefined || String(filterValue).trim() === '') {
-                            return true;
-                        }
-                        const productPrice = parseFloat(product.price);
-                        switch (filterKey) {
-                            case 'priceMax':
-                                return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice <= parseFloat(filterValue);
-                            case 'priceMin':
-                                return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice >= parseFloat(filterValue);
-                            case 'version':
-                                return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
-                            default:
-                                return true;
-                        }
-                    });
-                });
-            }
-
-            if (sortOption !== 'default') {
-                switch (sortOption) {
-                    case 'price-asc':
-                        productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity));
-                        break;
-                    case 'price-desc':
-                        productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity));
-                        break;
-                    case 'name-asc':
-                        productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-                        break;
-                    case 'name-desc':
-                        productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-                        break;
-                    case 'newest': 
-                        productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0));
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            setDisplayedProducts(productsToProcess);
-            setCurrentPage(1); 
-            setIsProcessing(false); 
-            setLoading(false); 
-        } else if (!loading) { 
-             setDisplayedProducts([]);
-             setIsProcessing(false);
-             setLoading(false);
+        if (searchTerm && searchTerm.trim() !== '') {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            productsToProcess = productsToProcess.filter(product =>
+                (product.name && product.name.toLowerCase().includes(lowerSearchTerm)) ||
+                (product.group?.name && product.group.name.toLowerCase().includes(lowerSearchTerm))
+            );
         }
 
-    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading, allFetchedProducts, error]);
+        if (Object.keys(activeFilters).length > 0) {
+            productsToProcess = productsToProcess.filter(product => {
+                return Object.entries(activeFilters).every(([filterKey, filterValue]) => {
+                    if (filterValue === null || filterValue === undefined || String(filterValue).trim() === '') return true;
+                    const productPrice = parseFloat(product.price);
+                    switch (filterKey) {
+                        case 'priceMax': return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice <= parseFloat(filterValue);
+                        case 'priceMin': return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice >= parseFloat(filterValue);
+                        case 'version': return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
+                        default: return true;
+                    }
+                });
+            });
+        }
+
+        if (sortOption !== 'default' && sortOption) {
+             switch (sortOption) {
+                case 'price-asc': productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity)); break;
+                case 'price-desc': productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity)); break;
+                case 'name-asc': productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
+                case 'name-desc': productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || "")); break;
+                case 'newest': productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0)); break;
+                default: break;
+            }
+        }
+        
+        const timer = setTimeout(() => {
+            setDisplayedProducts(productsToProcess);
+            setCurrentPage(1);
+            setIsProcessing(false); 
+        }, 50); 
+
+        return () => clearTimeout(timer);
+
+    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading]); 
+
+    useEffect(()=>{
+        if(!isProcessing && allFetchedProducts.length > 0 && loading){
+            setLoading(false);
+        }
+        else if (!isProcessing && allFetchedProducts.length === 0 && loading && !error){
+            setLoading(false);
+            setDisplayedProducts([]); 
+        }
+
+    }, [isProcessing, allFetchedProducts, loading, error])
 
 
     const handleResetFiltersAndSearch = () => {
         setSearchTerm('');
         contextSetActiveFilters({});
-
     };
 
     const toggleWishlist = async (productId, productName) => {
-        if (!MOCK_USER_ID) {
-            return;
-        }
-        const isInWishlist = wishlistStatus[productId];
+        if (!MOCK_USER_ID) return;
+        const currentStatus = wishlistStatus[productId];
+        setWishlistStatus(prev => ({ ...prev, [productId]: !currentStatus }));
         try {
-            if (isInWishlist) {
+            if (currentStatus) {
                 await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`);
-                setWishlistStatus(prev => ({ ...prev, [productId]: false }));
             } else {
                 await axios.post(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`);
-                setWishlistStatus(prev => ({ ...prev, [productId]: true }));
             }
         } catch (err) {
             console.error("Error toggling wishlist:", err);
+            setWishlistStatus(prev => ({ ...prev, [productId]: currentStatus }));
+            alert("Lỗi cập nhật Wishlist!");
         }
     };
 
     const toggleCollection = async (productId, productName) => {
         if (!MOCK_USER_ID) {
-            alert("Vui lòng đăng nhập để sử dụng chức năng này.");
+            alert("Vui lòng đăng nhập.");
             return;
         }
-        const isInCollection = collectionStatus[productId];
+        const currentStatus = collectionStatus[productId];
+        setCollectionStatus(prev => ({ ...prev, [productId]: !currentStatus }));
         try {
-            if (isInCollection) {
+            if (currentStatus) {
                 await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/${productId}`);
-                setCollectionStatus(prev => ({ ...prev, [productId]: false }));
             } else {
-                await axios.post(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/${productId}`); 
-                setCollectionStatus(prev => ({ ...prev, [productId]: true }));
+                await axios.post(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/${productId}`);
             }
         } catch (err) {
             console.error("Error toggling collection:", err);
-            alert(`Lỗi khi cập nhật Bộ sưu tập: ${err.response?.data?.message || err.message}`);
+            setCollectionStatus(prev => ({ ...prev, [productId]: currentStatus }));
+            alert(`Lỗi cập nhật Bộ sưu tập: ${err.response?.data?.message || err.message}`);
         }
     };
 
-    const handleAddToCart = async (product, e, quantity = 1) => { 
-        if (e && typeof e.preventDefault === 'function') e.preventDefault();
-        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    const updateProductStockInLists = (productId, newStockQuantity) => {
+        const updateList = (list) => list.map(p =>
+            p.id === productId ? { ...p, stockQuantity: newStockQuantity } : p
+        );
+        setAllFetchedProducts(prev => updateList(prev));
+        setDisplayedProducts(prev => updateList(prev));
 
-        if (product.stockQuantity < quantity) { 
-            setFeedbackMessage({ type: 'error', text: 'Không đủ hàng!', productId: product.id });
-            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 2000);
-            return;
+        if (selectedProductForModal && selectedProductForModal.id === productId) {
+            setSelectedProductForModal(prev => prev ? { ...prev, stockQuantity: newStockQuantity } : null);
         }
-        if (product.stockQuantity === 0 && quantity > 0) { 
-             alert("Sản phẩm này đã hết hàng!");
-             setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
-             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 2000);
-             return;
+    };
+
+    const handleAddToCart = useCallback(async (product, event, quantity = 1) => {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+
+        // Check input
+        if (!product || !product.id) {
+            console.error("HomePage: handleAddToCart - Invalid product data", product);
+            setFeedbackMessage({ type: 'error', text: 'Sản phẩm không hợp lệ!', productId: product?.id || null });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
+            return false; 
         }
 
+        // Check stock
+        if (product.stockQuantity === 0 && quantity > 0) {
+            setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
+            return false; 
+        }
+        if (product.stockQuantity < quantity) {
+            setFeedbackMessage({ type: 'error', text: `Chỉ còn ${product.stockQuantity} sản phẩm!`, productId: product.id });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
+            return false; 
+        }
 
         const success = await addToCart(product, quantity);
 
         if (success) {
             setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
-        } else {
-            setFeedbackMessage({ type: 'error', text: cartError || 'Lỗi thêm vào giỏ!', productId: product.id });
-        }
-        setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000); 
-    };
 
+            const newStock = Math.max(0, product.stockQuantity - quantity); 
+            updateProductStockInLists(product.id, newStock);
+
+        } else {
+            setFeedbackMessage({ type: 'error', text: cartContextError || 'Lỗi khi thêm vào giỏ!', productId: product.id });
+        }
+        setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
+        
+        return success; 
+    }, [addToCart, cartContextError, selectedProductForModal, allFetchedProducts]);
 
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
@@ -282,11 +294,11 @@ const HomePage = () => {
     const goToPage = (page) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            //window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
-const renderPaginationButtons = () => {
+    const renderPaginationButtons = () => {
         const pageNumbers = [];
         const SIBLING_COUNT = 1;
         const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3; 
@@ -339,7 +351,7 @@ const renderPaginationButtons = () => {
                 if (typeof p === 'number' && p === lastPushed) continue; 
                 
                 if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2) && cleanedPageNumbers[cleanedPageNumbers.length-1] === 1) {
-                    const lastNumIndex = cleanedPageNumbers.lastIndexOf(1);
+                    // const lastNumIndex = cleanedPageNumbers.lastIndexOf(1);
                     if (pageNumbers.includes(2) && pageNumbers.indexOf(2) === pageNumbers.indexOf(p) + 1) {
                          cleanedPageNumbers.push(2); 
                          lastPushed = 2;
@@ -394,10 +406,10 @@ const renderPaginationButtons = () => {
         ));
     };
 
-    if (loading && displayedProducts.length === 0) { 
+    if (loading && displayedProducts.length === 0 && !error) {
         return (
-            <div className="flex justify-center items-center min-h-[60vh]">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
+            <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+                <FaSpinner className="animate-spin text-4xl text-pink-600" />
                 <p className="ml-3 text-gray-700 text-sm">Đang tải sản phẩm...</p>
             </div>
         );
@@ -405,13 +417,13 @@ const renderPaginationButtons = () => {
 
     if (error) {
         return (
-            <div className="text-center p-10 bg-red-50 rounded-lg shadow max-w-md mx-auto">
+             <div className="text-center p-10 bg-red-50 rounded-lg shadow max-w-md mx-auto">
                 <p className="text-lg font-semibold text-red-700">Rất tiếc, đã xảy ra lỗi!</p>
                 <p className="text-sm mt-1 text-red-600">{error}</p>
                 <button
                     onClick={() => {
                         setError(null);
-                        fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null)
+                        fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null);
                     }}
                     className="mt-4 px-4 py-2 bg-pink-600 text-white text-sm rounded-md hover:bg-pink-700 transition-colors"
                 >
@@ -421,16 +433,19 @@ const renderPaginationButtons = () => {
         );
     }
 
+    const showProcessingSpinner = isProcessing && !loading; 
+
     return (
-        <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 bg-white-100 font-['Inter',_sans-serif] min-h-screen">
-            {isProcessing && ( 
-                <div className="text-center py-2">
-                    <p className="text-sm text-slate-500">Đang cập nhật danh sách...</p>
+        <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 font-['Inter',_sans-serif] min-h-screen">
+            {showProcessingSpinner && (
+                <div className="fixed inset-0 flex items-center justify-center bg-white/70 z-50">
+                    <FaSpinner className="animate-spin text-4xl text-pink-500" />
+                    <p className="ml-3 text-slate-700">Đang xử lý...</p>
                 </div>
             )}
 
             {!loading && !isProcessing && displayedProducts.length === 0 && (
-                 <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto mt-5">
+                 <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto mt-10">
                     <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
                     <p className="text-lg font-medium text-slate-700">
                         Không tìm thấy sản phẩm nào phù hợp.
@@ -446,18 +461,18 @@ const renderPaginationButtons = () => {
                 </div>
             )}
 
+            {/* Danh sách sản phẩm */}
             {displayedProducts.length > 0 && (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 transition-opacity duration-300 ${showProcessingSpinner ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                         {paginatedProducts.map(product => (
                             <div
                                 key={product.id}
-                                className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative" // Thêm relative
+                                className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative"
                                 onClick={() => handleOpenProductModal(product)}
                                 style={{cursor: 'pointer'}}
                             >
                                 <div className="relative">
-                                    {/* Image container */}
                                     <div style={{ paddingTop: '135%' }} />
                                         <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
                                             <img
@@ -466,70 +481,39 @@ const renderPaginationButtons = () => {
                                                 className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
                                             />
                                         </div>
-
-                                    {/* Wishlist Button */}
                                     <button
                                         className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 z-10"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleWishlist(product.id, product.name);
-                                        }}
+                                        onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id, product.name); }}
                                         aria-label={wishlistStatus[product.id] ? "Remove from Wishlist" : "Add to Wishlist"}
                                     >
-                                        {wishlistStatus[product.id]
-                                            ? <FaHeart className="w-4 h-4 text-pink-500" />
-                                            : <FaRegHeart className="w-4 h-4" />}
+                                        {wishlistStatus[product.id] ? <FaHeart className="w-4 h-4 text-pink-500" /> : <FaRegHeart className="w-4 h-4" />}
                                     </button>
-
-                                    {/* Add to Cart Button */}
                                     <button
                                         className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 z-10
                                             ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                                            ${cartAddingStatus[product.id] ? 'opacity-70 animate-pulse' : ''}
-                                        `}
+                                            ${cartAddingStatus && cartAddingStatus[product.id] ? 'opacity-70 animate-pulse' : ''} `}
                                         onClick={(e) => handleAddToCart(product, e)}
                                         aria-label="Add to Cart"
-                                        disabled={product.stockQuantity === 0 || !!cartAddingStatus[product.id]}
+                                        disabled={product.stockQuantity === 0 || !!(cartAddingStatus && cartAddingStatus[product.id])}
                                     >
-                                        {cartAddingStatus[product.id] ? (
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        ) : (
-                                            <FaShoppingCart className="w-4 h-4" />
-                                        )}
+                                        {cartAddingStatus && cartAddingStatus[product.id] ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FaShoppingCart className="w-4 h-4" />}
                                     </button>
-
-                                    {/* Add to Collection Button */}
                                     <button
                                         className={`absolute bottom-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-1 z-10
-                                            ${collectionStatus[product.id] ? 'text-teal-500 hover:text-teal-600 focus:ring-teal-500' : 'text-slate-500 hover:text-teal-500 focus:ring-teal-500'}
-                                        `}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleCollection(product.id, product.name);
-                                        }}
+                                            ${collectionStatus[product.id] ? 'text-teal-500 hover:text-teal-600 focus:ring-teal-500' : 'text-slate-500 hover:text-teal-500 focus:ring-teal-500'} `}
+                                        onClick={(e) => { e.stopPropagation(); toggleCollection(product.id, product.name); }}
                                         aria-label={collectionStatus[product.id] ? "Remove from Collection" : "Add to Collection"}
                                     >
-                                        {collectionStatus[product.id]
-                                            ? <FaCheckSquare className="w-4 h-4" />
-                                            : <FaPlusSquare className="w-4 h-4" />}
+                                        {collectionStatus[product.id] ? <FaCheckSquare className="w-4 h-4" /> : <FaPlusSquare className="w-4 h-4" />}
                                     </button>
                                 </div>
-
-                                {/* Product Info */}
                                 <div className="p-3.5 flex-grow flex flex-col justify-between">
                                      <div>
-                                        {product.group && (
-                                            <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
-                                        )}
-                                        <h3
-                                            className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]"
-                                            title={product.name}
-                                        >
+                                        {product.group && ( <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p> )}
+                                        <h3 className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]" title={product.name}>
                                             {product.name}
                                         </h3>
-                                        {product.version && (
-                                            <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
-                                        )}
+                                        {product.version && ( <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p> )}
                                     </div>
                                     <div className="mt-2.5">
                                         <div className="flex justify-between items-center">
@@ -555,23 +539,11 @@ const renderPaginationButtons = () => {
 
                     {totalPages > 1 && (
                         <div className="mt-8 flex justify-center items-center space-x-1.5">
-                             <button
-                                onClick={() => goToPage(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                aria-label="Previous Page"
-                            >
+                             <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Previous Page">
                                 <FaChevronLeft className="h-4 w-4" />
                             </button>
-
                             {renderPaginationButtons()}
-
-                            <button
-                                onClick={() => goToPage(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                aria-label="Next Page"
-                            >
+                            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Next Page">
                                 <FaChevronRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -583,11 +555,15 @@ const renderPaginationButtons = () => {
                 <ProductDetailModal
                     product={selectedProductForModal}
                     onClose={handleCloseModal}
-                    onAddToCart={(productFromModal, quantityFromModal) => handleAddToCart(productFromModal, null, quantityFromModal)} // Truyền quantity từ modal
-                    isAddingToCart={!!cartAddingStatus[selectedProductForModal.id]} 
+                    onAddToCart={(productFromModal, event, quantityFromModal) => 
+                        handleAddToCart(productFromModal, event, quantityFromModal) 
+                    }
+                    isAddingToCart={!!(cartAddingStatus && cartAddingStatus[selectedProductForModal.id])} 
+                    
                     wishlistStatus={wishlistStatus[selectedProductForModal.id]}
                     onToggleWishlist={toggleWishlist}
-                    collectionStatus={collectionStatus[selectedProductForModal.id]}
+                    
+                    collectionStatus={collectionStatus[selectedProductForModal.id]} 
                     onToggleCollection={toggleCollection}
                 />
             )}
