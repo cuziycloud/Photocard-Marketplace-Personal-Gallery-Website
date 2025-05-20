@@ -155,7 +155,7 @@ public class CartService {
         }
 
         pendingOrder.getOrderItems().remove(orderItem);
-        orderItemRepository.delete(orderItem); 
+        orderItemRepository.delete(orderItem);
 
         calculateOrderTotals(pendingOrder);
         orderRepository.save(pendingOrder);

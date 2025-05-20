@@ -109,7 +109,7 @@ export const CartProvider = ({ children }) => {
                     status: response.data.status
                 });
             } else {
-                await fetchCart(); // Fallback nếu backend không trả về cart đầy đủ
+                await fetchCart(); 
             }
             return true;
         } catch (error) {
@@ -123,7 +123,6 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-    // HÀM MỚI: Xóa sản phẩm khỏi giỏ hàng
     const removeItemFromCart = async (orderItemId) => {
         if (!MOCK_USER_ID || !orderItemId) {
             alert("Dữ liệu không hợp lệ để xóa sản phẩm.");
@@ -142,7 +141,6 @@ export const CartProvider = ({ children }) => {
                     status: response.data.status
                 });
             } else {
-                 // Nếu backend chỉ trả về 200/204 (No Content), thì fetch lại giỏ hàng
                  await fetchCart();
             }
             return true;

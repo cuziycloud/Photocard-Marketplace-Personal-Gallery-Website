@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,8 +35,10 @@ public class CartDTO {
         if (order.getUser() != null) {
             this.userId = order.getUser().getId();
         }
+
         this.items = (order.getOrderItems() != null)
                 ? order.getOrderItems().stream()
+                .sorted(Comparator.comparing(OrderItem::getId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(CartItemDTO::new)
                 .collect(Collectors.toList())
                 : new ArrayList<>();
