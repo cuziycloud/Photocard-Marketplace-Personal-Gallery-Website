@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { FaMusic, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
+import { useCart } from '../contexts/CartContext';
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const { cartItemCount } = useCart();
 
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => { 
