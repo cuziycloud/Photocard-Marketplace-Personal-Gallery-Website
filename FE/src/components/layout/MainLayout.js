@@ -11,10 +11,8 @@ import AddProductPage from '../../pages/admin/AddProductPage';
 const MainLayout = () => {
   const location = useLocation();
 
-  const navbarHeight = '4rem'; // Chiều cao Navbar của bạn
+  const navbarHeight = '4rem';
 
-  // Xác định xem StickyHeaderLayout có hiển thị nội dung đáng kể không (Categories hoặc SearchBar)
-  // Mảng này cần đồng bộ với logic trong StickyHeaderLayout
   const pagesWhereStickyHeaderIsLikelyHidden = [
     '/wishlist', 
     '/card', 
