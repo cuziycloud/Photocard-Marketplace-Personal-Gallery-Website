@@ -6,7 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Set; // Nếu bạn muốn có mối quan hệ hai chiều
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -31,6 +32,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(length = 10)
     private Role role;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Order> orders = new HashSet<>();
 
     public enum Role {
         customer, admin

@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; 
-import { 
-    FaRegHeart, 
-    FaHeart, 
-    FaShoppingCart, 
-    FaChevronLeft, 
+import { useNavigate } from 'react-router-dom';
+import {
+    FaRegHeart,
+    FaHeart,
+    FaShoppingCart,
+    FaChevronLeft,
     FaChevronRight,
-    FaPlusSquare,  
-    FaCheckSquare  
+    FaPlusSquare,
+    FaCheckSquare
 } from 'react-icons/fa';
 import axios from 'axios';
 import { useCategory } from '../contexts/CategoryContext';
 import { useSearchFilter } from '../contexts/SearchFilterContext';
-import ProductDetailModal from '../components/ProductDetailModal'; 
+import { useCart } from '../contexts/CartContext'; 
+import ProductDetailModal from '../components/ProductDetailModal';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const PRODUCTS_PER_PAGE = 15;
-const MOCK_USER_ID = 2;
+const MOCK_USER_ID = 2; 
 
 const shuffleArray = (array) => {
   if (!array || array.length === 0) return [];
@@ -28,21 +29,23 @@ const shuffleArray = (array) => {
   return newArray;
 };
 
-const ProductList = () => {
+const HomePage = () => {
     const { selectedCategory } = useCategory();
     const { searchTerm, sortOption, activeFilters, setSearchTerm, setActiveFilters: contextSetActiveFilters } = useSearchFilter();
+    const { addToCart, addingToCart: cartAddingStatus, cartError } = useCart();
 
     const [allFetchedProducts, setAllFetchedProducts] = useState([]);
     const [shuffledInitialProducts, setShuffledInitialProducts] = useState([]);
     const [displayedProducts, setDisplayedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false); 
+    const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
-    const [collectionStatus, setCollectionStatus] = useState({}); 
+    const [collectionStatus, setCollectionStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
-    const navigate = useNavigate();
+    const navigate = useNavigate(); 
     const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+    const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null }); 
 
     useEffect(() => {
         if (selectedProductForModal) {
@@ -56,18 +59,20 @@ const ProductList = () => {
     }, [selectedProductForModal]);
 
     const fetchProductsAndAllStatuses = useCallback(async (currentGroupId) => {
+        setLoading(true); 
+        setIsProcessing(true);
         try {
-            const params = { groupId: currentGroupId };
+            const params = currentGroupId ? { groupId: currentGroupId } : {};
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, { params });
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
-            
-            setAllFetchedProducts(fetchedProducts); 
+
+            setAllFetchedProducts(fetchedProducts);
             setShuffledInitialProducts(shuffleArray(fetchedProducts)); 
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
                 const newWishlistStatus = {};
-                const newCollectionStatus = {}; 
+                const newCollectionStatus = {};
 
                 await Promise.all(productIds.map(async (productId) => {
                     try {
@@ -78,7 +83,7 @@ const ProductList = () => {
                     }
                     try {
                         const collectionResp = await axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/check/${productId}`);
-                        newCollectionStatus[productId] = collectionResp.data.isInCollection; 
+                        newCollectionStatus[productId] = collectionResp.data.isInCollection;
                     } catch (checkErr) {
                         newCollectionStatus[productId] = false;
                     }
@@ -87,94 +92,111 @@ const ProductList = () => {
                 setCollectionStatus(newCollectionStatus);
             } else {
                 setWishlistStatus({});
-                setCollectionStatus({}); 
+                setCollectionStatus({});
             }
-            setError(null); 
+            setError(null);
         } catch (err) {
             console.error("Error fetching products or statuses:", err);
             setError("Không thể tải danh sách sản phẩm hoặc trạng thái.");
             setAllFetchedProducts([]);
             setShuffledInitialProducts([]);
             setWishlistStatus({});
-            setCollectionStatus({}); 
-        } 
+            setCollectionStatus({});
+        } finally {
+
+        }
     }, [MOCK_USER_ID]); 
 
     useEffect(() => {
-        setLoading(true); 
-        setIsProcessing(true); 
         const groupId = selectedCategory ? selectedCategory.id : null;
-        fetchProductsAndAllStatuses(groupId).finally(() => {
-            setLoading(false);
-        });
-    }, [selectedCategory, fetchProductsAndAllStatuses]);
+        fetchProductsAndAllStatuses(groupId);
+    }, [selectedCategory, fetchProductsAndAllStatuses]); 
 
     useEffect(() => {
-        if (loading) { 
+        if (allFetchedProducts.length === 0 && !loading && !error) { 
+            setDisplayedProducts([]);
+            setIsProcessing(false);
+            setLoading(false); 
+            return;
+        }
+
+        if (shuffledInitialProducts.length === 0 && allFetchedProducts.length > 0) {
+            setIsProcessing(false);
+            setLoading(false);
             return;
         }
         
-        setIsProcessing(true);
-        let productsToProcess = [...shuffledInitialProducts]; 
+        if (shuffledInitialProducts.length > 0) {
+            setIsProcessing(true);
+            let productsToProcess = [...shuffledInitialProducts];
 
-        if (searchTerm && searchTerm.trim() !== '') {
-            productsToProcess = productsToProcess.filter(product =>
-                (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (product.group?.name && product.group.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            );
-        }
-
-        if (Object.keys(activeFilters).length > 0) {
-            productsToProcess = productsToProcess.filter(product => {
-                return Object.entries(activeFilters).every(([filterKey, filterValue]) => {
-                    if (filterValue === null || filterValue === undefined || String(filterValue).trim() === '') {
-                        return true;
-                    }
-                    const productPrice = parseFloat(product.price);
-                    switch (filterKey) {
-                        case 'priceMax':
-                            if (isNaN(productPrice) || isNaN(parseFloat(filterValue))) return false;
-                            return productPrice <= parseFloat(filterValue);
-                        case 'priceMin':
-                            if (isNaN(productPrice) || isNaN(parseFloat(filterValue))) return false;
-                            return productPrice >= parseFloat(filterValue);
-                        case 'version':
-                            return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
-                        default:
-                            return true;
-                    }
-                });
-            });
-        }
-
-        if (sortOption !== 'default') { 
-            switch (sortOption) {
-                case 'price-asc':
-                    productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity));
-                    break;
-                case 'price-desc':
-                    productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity));
-                    break;
-                case 'name-asc':
-                    productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-                    break;
-                case 'name-desc':
-                    productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-                    break;
-                case 'newest':
-                    productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0));
-                    break;
+            if (searchTerm && searchTerm.trim() !== '') {
+                productsToProcess = productsToProcess.filter(product =>
+                    (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (product.group?.name && product.group.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                );
             }
+
+            if (Object.keys(activeFilters).length > 0) {
+                productsToProcess = productsToProcess.filter(product => {
+                    return Object.entries(activeFilters).every(([filterKey, filterValue]) => {
+                        if (filterValue === null || filterValue === undefined || String(filterValue).trim() === '') {
+                            return true;
+                        }
+                        const productPrice = parseFloat(product.price);
+                        switch (filterKey) {
+                            case 'priceMax':
+                                return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice <= parseFloat(filterValue);
+                            case 'priceMin':
+                                return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice >= parseFloat(filterValue);
+                            case 'version':
+                                return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
+                            default:
+                                return true;
+                        }
+                    });
+                });
+            }
+
+            if (sortOption !== 'default') {
+                switch (sortOption) {
+                    case 'price-asc':
+                        productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity));
+                        break;
+                    case 'price-desc':
+                        productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity));
+                        break;
+                    case 'name-asc':
+                        productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                        break;
+                    case 'name-desc':
+                        productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
+                        break;
+                    case 'newest': 
+                        productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0));
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            setDisplayedProducts(productsToProcess);
+            setCurrentPage(1); 
+            setIsProcessing(false); 
+            setLoading(false); 
+        } else if (!loading) { 
+             setDisplayedProducts([]);
+             setIsProcessing(false);
+             setLoading(false);
         }
-        
-        setDisplayedProducts(productsToProcess);
-        setCurrentPage(1);
-        setIsProcessing(false);
-    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading]); 
+
+    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading, allFetchedProducts, error]);
+
 
     const handleResetFiltersAndSearch = () => {
         setSearchTerm('');
         contextSetActiveFilters({});
+
     };
 
     const toggleWishlist = async (productId, productName) => {
@@ -215,18 +237,33 @@ const ProductList = () => {
         }
     };
 
-    const handleAddToCart = (product, e) => {
+    const handleAddToCart = async (product, e, quantity = 1) => { 
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
         if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-        
-        if (product.stockQuantity === 0) {
-            alert("Sản phẩm này đã hết hàng!");
+
+        if (product.stockQuantity < quantity) { 
+            setFeedbackMessage({ type: 'error', text: 'Không đủ hàng!', productId: product.id });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 2000);
             return;
         }
-        if (selectedProductForModal && selectedProductForModal.id === product.id) {
-            handleCloseModal();
+        if (product.stockQuantity === 0 && quantity > 0) { 
+             alert("Sản phẩm này đã hết hàng!");
+             setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
+             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 2000);
+             return;
         }
+
+
+        const success = await addToCart(product, quantity);
+
+        if (success) {
+            setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
+        } else {
+            setFeedbackMessage({ type: 'error', text: cartError || 'Lỗi thêm vào giỏ!', productId: product.id });
+        }
+        setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000); 
     };
+
 
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
@@ -249,7 +286,7 @@ const ProductList = () => {
         }
     };
 
-    const renderPaginationButtons = () => {
+const renderPaginationButtons = () => {
         const pageNumbers = [];
         const SIBLING_COUNT = 1;
         const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3; 
@@ -357,7 +394,7 @@ const ProductList = () => {
         ));
     };
 
-    if (loading) {
+    if (loading && displayedProducts.length === 0) { 
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
@@ -372,7 +409,10 @@ const ProductList = () => {
                 <p className="text-lg font-semibold text-red-700">Rất tiếc, đã xảy ra lỗi!</p>
                 <p className="text-sm mt-1 text-red-600">{error}</p>
                 <button
-                    onClick={() => fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null)}
+                    onClick={() => {
+                        setError(null);
+                        fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null)
+                    }}
                     className="mt-4 px-4 py-2 bg-pink-600 text-white text-sm rounded-md hover:bg-pink-700 transition-colors"
                 >
                     Thử lại
@@ -383,17 +423,17 @@ const ProductList = () => {
 
     return (
         <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 bg-white-100 font-['Inter',_sans-serif] min-h-screen">
-            {isProcessing && !loading && (
+            {isProcessing && ( 
                 <div className="text-center py-2">
                     <p className="text-sm text-slate-500">Đang cập nhật danh sách...</p>
                 </div>
             )}
 
-            {displayedProducts.length === 0 && !loading && !isProcessing && (
+            {!loading && !isProcessing && displayedProducts.length === 0 && (
                  <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto mt-5">
                     <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
                     <p className="text-lg font-medium text-slate-700">
-                        Không tìm thấy sản phẩm nào phù hợp với tiêu chí của bạn.
+                        Không tìm thấy sản phẩm nào phù hợp.
                     </p>
                     {(searchTerm || Object.keys(activeFilters).length > 0) && (
                         <button
@@ -412,12 +452,13 @@ const ProductList = () => {
                         {paginatedProducts.map(product => (
                             <div
                                 key={product.id}
-                                className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
-                                onClick={() => handleOpenProductModal(product)} 
-                                style={{cursor: 'pointer'}} 
+                                className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative" // Thêm relative
+                                onClick={() => handleOpenProductModal(product)}
+                                style={{cursor: 'pointer'}}
                             >
                                 <div className="relative">
-                                    <div style={{ paddingTop: '135%' }} /> 
+                                    {/* Image container */}
+                                    <div style={{ paddingTop: '135%' }} />
                                         <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
                                             <img
                                                 src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
@@ -426,11 +467,11 @@ const ProductList = () => {
                                             />
                                         </div>
 
-                                    {/* Wishlist */}
+                                    {/* Wishlist Button */}
                                     <button
-                                        className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                                        className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 z-10"
                                         onClick={(e) => {
-                                            e.stopPropagation(); 
+                                            e.stopPropagation();
                                             toggleWishlist(product.id, product.name);
                                         }}
                                         aria-label={wishlistStatus[product.id] ? "Remove from Wishlist" : "Add to Wishlist"}
@@ -440,28 +481,30 @@ const ProductList = () => {
                                             : <FaRegHeart className="w-4 h-4" />}
                                     </button>
 
-                                    {/* Add to Cart */}
+                                    {/* Add to Cart Button */}
                                     <button
-                                        className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500
+                                        className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 z-10
                                             ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                                            ${cartAddingStatus[product.id] ? 'opacity-70 animate-pulse' : ''}
                                         `}
-                                        onClick={(e) => {
-                                            e.stopPropagation(); 
-                                            handleAddToCart(product, e);
-                                        }}
+                                        onClick={(e) => handleAddToCart(product, e)}
                                         aria-label="Add to Cart"
-                                        disabled={product.stockQuantity === 0}
+                                        disabled={product.stockQuantity === 0 || !!cartAddingStatus[product.id]}
                                     >
-                                        <FaShoppingCart className="w-4 h-4" />
+                                        {cartAddingStatus[product.id] ? (
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        ) : (
+                                            <FaShoppingCart className="w-4 h-4" />
+                                        )}
                                     </button>
 
-                                    {/* ADD TO COLLECTION */}
+                                    {/* Add to Collection Button */}
                                     <button
-                                        className={`absolute bottom-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-1 
+                                        className={`absolute bottom-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-1 z-10
                                             ${collectionStatus[product.id] ? 'text-teal-500 hover:text-teal-600 focus:ring-teal-500' : 'text-slate-500 hover:text-teal-500 focus:ring-teal-500'}
                                         `}
                                         onClick={(e) => {
-                                            e.stopPropagation(); 
+                                            e.stopPropagation();
                                             toggleCollection(product.id, product.name);
                                         }}
                                         aria-label={collectionStatus[product.id] ? "Remove from Collection" : "Add to Collection"}
@@ -472,8 +515,9 @@ const ProductList = () => {
                                     </button>
                                 </div>
 
+                                {/* Product Info */}
                                 <div className="p-3.5 flex-grow flex flex-col justify-between">
-                                    <div>
+                                     <div>
                                         {product.group && (
                                             <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>
                                         )}
@@ -498,13 +542,20 @@ const ProductList = () => {
                                         </div>
                                     </div>
                                 </div>
+                                {feedbackMessage.productId === product.id && feedbackMessage.text && (
+                                    <div className={`absolute bottom-12 left-1/2 -translate-x-1/2 px-2 py-1 text-xs rounded-md shadow-lg z-20 pointer-events-none
+                                        ${feedbackMessage.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}
+                                        transition-opacity duration-300 ${feedbackMessage.text ? 'opacity-100' : 'opacity-0'}`}>
+                                        {feedbackMessage.text}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
 
                     {totalPages > 1 && (
-                         <div className="mt-8 flex justify-center items-center space-x-1.5">
-                            <button
+                        <div className="mt-8 flex justify-center items-center space-x-1.5">
+                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
                                 className="p-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -532,7 +583,8 @@ const ProductList = () => {
                 <ProductDetailModal
                     product={selectedProductForModal}
                     onClose={handleCloseModal}
-                    onAddToCart={handleAddToCart}
+                    onAddToCart={(productFromModal, quantityFromModal) => handleAddToCart(productFromModal, null, quantityFromModal)} // Truyền quantity từ modal
+                    isAddingToCart={!!cartAddingStatus[selectedProductForModal.id]} 
                     wishlistStatus={wishlistStatus[selectedProductForModal.id]}
                     onToggleWishlist={toggleWishlist}
                     collectionStatus={collectionStatus[selectedProductForModal.id]}
@@ -543,4 +595,4 @@ const ProductList = () => {
     );
 };
 
-export default ProductList;
+export default HomePage;

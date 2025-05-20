@@ -14,6 +14,9 @@ export const CartProvider = ({ children }) => {
     const [cartError, setCartError] = useState(null);
     const [addingToCart, setAddingToCart] = useState({}); 
 
+    const [updatingItem, setUpdatingItem] = useState({}); 
+    const [removingItem, setRemovingItem] = useState({});
+
     const fetchCart = useCallback(async () => {
         if (!MOCK_USER_ID) return;
         setLoadingCart(true);
@@ -86,10 +89,90 @@ export const CartProvider = ({ children }) => {
         }
     };
 
+    const updateItemQuantity = async (orderItemId, newQuantity) => {
+        if (!MOCK_USER_ID || !orderItemId || newQuantity < 1) {
+            alert("Dữ liệu không hợp lệ để cập nhật số lượng.");
+            return false;
+        }
+        setUpdatingItem(prev => ({ ...prev, [orderItemId]: true }));
+        setCartError(null);
+        try {
+            const response = await axios.put(`${API_BASE_URL}/users/${MOCK_USER_ID}/cart/items/${orderItemId}`, {
+                quantity: newQuantity,
+            });
+            if (response.data && response.data.items) {
+                setCart({
+                    orderId: response.data.orderId,
+                    items: response.data.items,
+                    totalQuantity: response.data.totalQuantity || 0,
+                    totalAmount: response.data.totalAmount || 0,
+                    status: response.data.status
+                });
+            } else {
+                await fetchCart(); // Fallback nếu backend không trả về cart đầy đủ
+            }
+            return true;
+        } catch (error) {
+            console.error("Error updating item quantity:", error);
+            const errorMessage = error.response?.data?.message || "Lỗi cập nhật số lượng sản phẩm.";
+            setCartError(errorMessage);
+            alert(`Lỗi: ${errorMessage}`);
+            return false;
+        } finally {
+            setUpdatingItem(prev => ({ ...prev, [orderItemId]: false }));
+        }
+    };
+
+    // HÀM MỚI: Xóa sản phẩm khỏi giỏ hàng
+    const removeItemFromCart = async (orderItemId) => {
+        if (!MOCK_USER_ID || !orderItemId) {
+            alert("Dữ liệu không hợp lệ để xóa sản phẩm.");
+            return false;
+        }
+        setRemovingItem(prev => ({ ...prev, [orderItemId]: true }));
+        setCartError(null);
+        try {
+            const response = await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/cart/items/${orderItemId}`);
+            if (response.data && response.data.items) {
+                 setCart({
+                    orderId: response.data.orderId,
+                    items: response.data.items,
+                    totalQuantity: response.data.totalQuantity || 0,
+                    totalAmount: response.data.totalAmount || 0,
+                    status: response.data.status
+                });
+            } else {
+                 // Nếu backend chỉ trả về 200/204 (No Content), thì fetch lại giỏ hàng
+                 await fetchCart();
+            }
+            return true;
+        } catch (error) {
+            console.error("Error removing item from cart:", error);
+            const errorMessage = error.response?.data?.message || "Lỗi xóa sản phẩm khỏi giỏ hàng.";
+            setCartError(errorMessage);
+            alert(`Lỗi: ${errorMessage}`);
+            return false;
+        } finally {
+            setRemovingItem(prev => ({ ...prev, [orderItemId]: false }));
+        }
+    };
+
     const cartItemCount = cart ? cart.totalQuantity : 0;
 
     return (
-        <CartContext.Provider value={{ cart, cartItemCount, addToCart, fetchCart, loadingCart, cartError, addingToCart }}>
+        <CartContext.Provider value={{
+            cart,
+            cartItemCount,
+            addToCart,
+            fetchCart,
+            loadingCart,
+            cartError,
+            addingToCart,
+            updateItemQuantity,
+            removeItemFromCart, 
+            updatingItem,       
+            removingItem 
+        }}>
             {children}
         </CartContext.Provider>
     );

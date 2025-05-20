@@ -6,7 +6,7 @@ import { useCart } from '../contexts/CartContext';
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
-    const { cartItemCount } = useCart();
+    const { cartItemCount, loadingCart } = useCart();
 
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => { 
@@ -92,9 +92,11 @@ const Navbar = () => {
                     <div className="hidden md:flex items-center space-x-4">
                         <Link to="/cart" aria-label="Cart" className={`${actionButtonClasses} relative`}>
                             <FaShoppingCart className="h-6 w-6" />
+                            { !loadingCart && cartItemCount > 0 && ( // Kiểm tra loadingCart để tránh hiển thị số 0 tạm thời
                                 <span className="absolute -top-0.5 -right-0.5 px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
-                                    3
+                                    {cartItemCount}
                                 </span>
+                            )}
                         </Link>
                     </div>
 
