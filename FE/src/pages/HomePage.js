@@ -46,6 +46,7 @@ const HomePage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedProductForModal, setSelectedProductForModal] = useState(null);
     const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null });
+    const [productListKey, setProductListKey] = useState(Date.now()); 
 
     useEffect(() => {
         if (selectedProductForModal) {
@@ -62,7 +63,7 @@ const HomePage = () => {
         setLoading(true); 
         setError(null);
         setAllFetchedProducts([]);
-        setShuffledInitialProducts([]);
+        setShuffledInitialProducts([]); 
 
         try {
             const params = currentGroupId ? { groupId: currentGroupId } : {};
@@ -70,11 +71,11 @@ const HomePage = () => {
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
 
             setAllFetchedProducts(fetchedProducts);
-            setShuffledInitialProducts(shuffleArray(fetchedProducts));
+            setShuffledInitialProducts(shuffleArray(fetchedProducts)); 
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
-                const wishlistPromises = productIds.map(productId =>
+                 const wishlistPromises = productIds.map(productId =>
                     axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`)
                         .then(res => ({ [productId]: res.data.isInWishlist }))
                         .catch(() => ({ [productId]: false }))
@@ -99,33 +100,27 @@ const HomePage = () => {
         } catch (err) {
             console.error("Error fetching products or statuses:", err);
             setError("Không thể tải danh sách sản phẩm hoặc trạng thái.");
-
             setAllFetchedProducts([]);
             setShuffledInitialProducts([]);
             setWishlistStatus({});
             setCollectionStatus({});
-        } finally {
-            
-        }
-    }, [MOCK_USER_ID]);
+        } 
+    }, [MOCK_USER_ID]); 
 
     useEffect(() => {
-        setLoading(true);    
-        setIsProcessing(true); 
         const groupId = selectedCategory ? selectedCategory.id : null;
         fetchProductsAndAllStatuses(groupId)
-            .finally(() => {
-                
-            });
     }, [selectedCategory, fetchProductsAndAllStatuses]);
+
 
     useEffect(() => {
         if (loading) { 
-            setIsProcessing(true);    
+            setIsProcessing(true);
+        } else {
+            setIsProcessing(true);
         }
         
-        let productsToProcess = shuffleArray([...allFetchedProducts]);
-        // No shuffle: let productsToProcess = [...allFetchedProducts];
+        let productsToProcess = [...allFetchedProducts];
 
         if (searchTerm && searchTerm.trim() !== '') {
             const lowerSearchTerm = searchTerm.toLowerCase();
@@ -149,15 +144,17 @@ const HomePage = () => {
                 });
             });
         }
-
-        if (sortOption !== 'default' && sortOption) {
+        
+        if (sortOption === 'default') {
+            productsToProcess = shuffleArray(productsToProcess); 
+        } else if (sortOption) { 
             switch (sortOption) {
                 case 'price-asc': productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity)); break;
                 case 'price-desc': productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity)); break;
                 case 'name-asc': productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
                 case 'name-desc': productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || "")); break;
                 case 'newest': productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0)); break;
-                default: break;
+                default: break; 
             }
         }
         
@@ -165,22 +162,21 @@ const HomePage = () => {
             setDisplayedProducts(productsToProcess);
             setCurrentPage(1);
             setIsProcessing(false); 
+            setProductListKey(Date.now()); 
         }, 50); 
 
         return () => clearTimeout(timer);
 
-    }, [shuffledInitialProducts, searchTerm, sortOption, activeFilters, loading]); 
+    }, [allFetchedProducts, searchTerm, sortOption, activeFilters, loading]); 
 
     useEffect(()=>{
-        if(!isProcessing && allFetchedProducts.length > 0 && loading){
+        if(!isProcessing && loading && allFetchedProducts.length > 0){ 
             setLoading(false);
         }
-        else if (!isProcessing && allFetchedProducts.length === 0 && loading && !error){
+        else if (!isProcessing && loading && allFetchedProducts.length === 0 && !error){
             setLoading(false);
-            setDisplayedProducts([]); 
         }
-
-    }, [isProcessing, allFetchedProducts, loading, error])
+    }, [isProcessing, allFetchedProducts, loading, error]);
 
 
     const handleResetFiltersAndSearch = () => {
@@ -230,7 +226,6 @@ const HomePage = () => {
             p.id === productId ? { ...p, stockQuantity: newStockQuantity } : p
         );
         setAllFetchedProducts(prev => updateList(prev));
-        setDisplayedProducts(prev => updateList(prev));
 
         if (selectedProductForModal && selectedProductForModal.id === productId) {
             setSelectedProductForModal(prev => prev ? { ...prev, stockQuantity: newStockQuantity } : null);
@@ -241,7 +236,6 @@ const HomePage = () => {
         if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
 
-        // Check input
         if (!product || !product.id) {
             console.error("HomePage: handleAddToCart - Invalid product data", product);
             setFeedbackMessage({ type: 'error', text: 'Sản phẩm không hợp lệ!', productId: product?.id || null });
@@ -249,7 +243,6 @@ const HomePage = () => {
             return false; 
         }
 
-        // Check stock
         if (product.stockQuantity === 0 && quantity > 0) {
             setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
@@ -265,18 +258,15 @@ const HomePage = () => {
 
         if (success) {
             setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
-
             const newStock = Math.max(0, product.stockQuantity - quantity); 
             updateProductStockInLists(product.id, newStock);
-
         } else {
             setFeedbackMessage({ type: 'error', text: cartContextError || 'Lỗi khi thêm vào giỏ!', productId: product.id });
         }
         setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
         
         return success; 
-    }, [addToCart, cartContextError, selectedProductForModal, allFetchedProducts]);
-
+    }, [addToCart, cartContextError, updateProductStockInLists]); 
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
     };
@@ -323,10 +313,10 @@ const HomePage = () => {
             }
             
             let startPageForRange = leftSiblingIndex;
-            if (shouldShowLeftEllipsis && startPageForRange === 2) startPageForRange++; 
+            if (shouldShowLeftEllipsis && startPageForRange === 2 && leftSiblingIndex > 1) startPageForRange++; 
             
             let endPageForRange = rightSiblingIndex;
-            if (shouldShowRightEllipsis && endPageForRange === totalPages -1) endPageForRange--; 
+            if (shouldShowRightEllipsis && endPageForRange === totalPages -1 && rightSiblingIndex < totalPages) endPageForRange--; 
 
             for (let i = startPageForRange; i <= endPageForRange; i++) {
                 if (i > 1 && i < totalPages) { 
@@ -335,8 +325,8 @@ const HomePage = () => {
             }
             
             if (shouldShowRightEllipsis) {
-                if (pageNumbers[pageNumbers.length-1] !== totalPages -1  || (pageNumbers[pageNumbers.length-1] === currentPage && currentPage < totalPages -1) ) {
-                    pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
+                 if (pageNumbers[pageNumbers.length - 1] !== totalPages - 1 || (pageNumbers[pageNumbers.length-1] === currentPage && currentPage < totalPages -1 && !pageNumbers.includes(totalPages-1) ) ) {
+                    if(endPageForRange < totalPages -1 ) pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
                 }
             }
 
@@ -347,35 +337,28 @@ const HomePage = () => {
             const cleanedPageNumbers = [];
             let lastPushed = null;
             for (const p of pageNumbers) {
-                if (typeof p === 'string' && p.startsWith('SHOW_') && typeof lastPushed === 'string' && lastPushed.startsWith('SHOW_')) continue; 
-                if (typeof p === 'number' && p === lastPushed) continue; 
+                if (typeof p === 'string' && p === lastPushed) continue;
+                if (typeof p === 'number' && p === lastPushed) continue;
                 
                 if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2) && cleanedPageNumbers[cleanedPageNumbers.length-1] === 1) {
-                    // const lastNumIndex = cleanedPageNumbers.lastIndexOf(1);
-                    if (pageNumbers.includes(2) && pageNumbers.indexOf(2) === pageNumbers.indexOf(p) + 1) {
-                        cleanedPageNumbers.push(2); 
-                        lastPushed = 2;
-                        continue;
+                    if (pageNumbers.includes(2) && pageNumbers.indexOf(2) === pageNumbers.indexOf(p) + 1 && !cleanedPageNumbers.includes(2)) {
+                         cleanedPageNumbers.push(2); lastPushed = 2; continue;
                     }
                 }
-                if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1) && cleanedPageNumbers[cleanedPageNumbers.length-1] === totalPages -1) {
+                 if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1) && cleanedPageNumbers[cleanedPageNumbers.length -1 ] === totalPages -1 && !pageNumbers.includes(totalPages)) {
                     if (pageNumbers.includes(totalPages) && pageNumbers.indexOf(totalPages) === pageNumbers.indexOf(p) + 1) {
-                        lastPushed = p; 
-                        continue;
+                        lastPushed = p; continue;
                     }
                 }
-
                 cleanedPageNumbers.push(p);
                 lastPushed = p;
             }
-            if (cleanedPageNumbers.length > 2) {
-                if (cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[2] === 2) {
-                    cleanedPageNumbers.splice(1, 1); 
-                }
-                const lastIdx = cleanedPageNumbers.length -1;
-                if (lastIdx > 1 && cleanedPageNumbers[lastIdx-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIdx-2] === totalPages -1) {
-                    cleanedPageNumbers.splice(lastIdx-1, 1); 
-                }
+            if (cleanedPageNumbers.length > 2 && cleanedPageNumbers[0] === 1 && cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[2] === 2) {
+                cleanedPageNumbers.splice(1, 1);
+            }
+            const lastIdxCleaned = cleanedPageNumbers.length -1;
+            if (lastIdxCleaned > 1 && cleanedPageNumbers[lastIdxCleaned] === totalPages && cleanedPageNumbers[lastIdxCleaned-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIdxCleaned-2] === totalPages -1) {
+                cleanedPageNumbers.splice(lastIdxCleaned-1, 1);
             }
 
 
@@ -406,7 +389,8 @@ const HomePage = () => {
         ));
     };
 
-    if (loading && displayedProducts.length === 0 && !error) {
+
+    if (loading) { 
         return (
             <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
                 <FaSpinner className="animate-spin text-4xl text-pink-600" />
@@ -433,11 +417,11 @@ const HomePage = () => {
         );
     }
 
-    const showProcessingSpinner = isProcessing && !loading; 
+    const showProcessingSpinner = isProcessing;
 
     return (
         <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 font-['Inter',_sans-serif] min-h-screen">
-            {showProcessingSpinner && (
+            {showProcessingSpinner && !loading && (
                 <div className="fixed inset-0 flex items-center justify-center bg-white/70 z-50">
                     <FaSpinner className="animate-spin text-4xl text-pink-500" />
                     <p className="ml-3 text-slate-700">Đang xử lý...</p>
@@ -462,9 +446,13 @@ const HomePage = () => {
             )}
 
             {/* Danh sách sản phẩm */}
-            {displayedProducts.length > 0 && (
+            {!loading && displayedProducts.length > 0 && (
                 <>
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 transition-opacity duration-300 ${showProcessingSpinner ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    <div
+                        key={productListKey} 
+                        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 animate-fadeInUpGrid 
+                                   ${showProcessingSpinner ? 'opacity-30 pointer-events-none' : 'opacity-100'}`} // Keep opacity for smooth transition with processing spinner
+                    >
                         {paginatedProducts.map(product => (
                             <div
                                 key={product.id}
