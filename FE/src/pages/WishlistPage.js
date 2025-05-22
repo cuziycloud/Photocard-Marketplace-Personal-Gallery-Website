@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
 import {
   FaHeartBroken,
   FaSortAmountDown,
@@ -7,59 +7,84 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTimesCircle,
+  FaShoppingCart, 
 } from 'react-icons/fa';
 import axios from 'axios';
 import ProductDetailModal from '../components/ProductDetailModal';
+import { useCart } from '../contexts/CartContext'; 
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const MOCK_USER_ID = 2;
 const ITEMS_PER_PAGE = 10;
 
-const SimpleProductCard = ({ product, onRemove, onClickCard }) => ( 
-  <div 
-    className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow transform hover:-translate-y-0.5 hover:scale-105 overflow-hidden flex flex-col"
-    onClick={() => onClickCard(product)} 
-    style={{cursor: 'pointer'}}
+const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
+  <div
+    className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative"
+    onClick={() => onClickCard(product)}
+    style={{ cursor: 'pointer' }}
   >
-    <div className="relative w-full pb-[120%] bg-gray-100">
-       <div style={{ paddingTop: '10%' }} />
-            <div className="absolute inset-0 bg-[#f1f3f6] p-[10px] sm:p-[15px] md:p-[20px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
-                <img
-                    src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                    alt={product.name}
-                    className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                />
-            </div>
+    <div className="relative">
+      <div style={{ paddingTop: '135%' }} />
+      <div className="absolute inset-0 bg-[#e5e7eb] p-[20px] sm:p-[30px] md:p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+        <img
+          src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+          alt={product.name}
+          className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+        />
+      </div>
       {onRemove && (
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation(); 
+            e.stopPropagation();
             onRemove(product.id, product.name);
           }}
-          title="Remove from Wishlist"
-          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-red-400"
+          title="Remove from Wishlist" 
+          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 z-10"
           aria-label="Remove from Wishlist"
         >
-          <FaTimesCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <FaTimesCircle className="w-3.5 h-3.5" /> 
         </button>
       )}
-    </div>
-    <div className="p-2 flex flex-col flex-grow justify-between">
-      {product.group?.name && (
-        <p className="text-xs font-medium text-gray-400 mb-1 truncate">
-          {product.group.name}
-        </p>
-      )}
-      <h3
-        className="text-sm font-semibold text-gray-800 line-clamp-2 mb-1 leading-snug"
-        title={product.name}
+      
+      <button
+          className={`absolute bottom-2.5 left-2.5 bg-slate-400 text-white p-1.5 rounded-full shadow-md cursor-not-allowed z-10 opacity-50`}
+          onClick={(e) => {e.stopPropagation(); alert("Thêm vào giỏ từ chi tiết sản phẩm.");}}
+          aria-label="Add to Cart (disabled)"
+          disabled={true}
+          title="Thêm vào giỏ từ chi tiết sản phẩm"
       >
-        {product.name}
-      </h3>
-      <p className="text-sm text-pink-600 font-bold">
-        ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
-      </p>
+          <FaShoppingCart className="w-4 h-4" />
+      </button>
+     
+    </div>
+    <div className="p-3.5 flex-grow flex flex-col justify-between">
+      <div>
+        {product.group?.name && (
+          <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">
+            {product.group.name.toUpperCase()}
+          </p>
+        )}
+        <h3
+          className="text-[0.9rem] sm:text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-snug line-clamp-2 min-h-[2.4em]"
+          title={product.name}
+        >
+          {product.name}
+        </h3>
+        {product.version && (
+          <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
+        )}
+      </div>
+      <div className="mt-2.5">
+        <div className="flex justify-between items-center">
+          <p className="text-md font-bold text-pink-600">
+            ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
+          </p>
+           <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
+            </p>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -70,8 +95,9 @@ const WishlistPage = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('date_added_desc');
-
   const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+
+  const { addToCart: contextAddToCart, addingToCart: cartAddingStatus, cartItemCount } = useCart(); 
 
   useEffect(() => {
     if (selectedProductForModal) {
@@ -107,16 +133,14 @@ const WishlistPage = () => {
   }, [fetchWishlistedProducts]);
 
   const handleRemoveFromWishlist = async (productId, productName) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa "${productName}" khỏi danh sách yêu thích không?`)) return;
     try {
       await axios.delete(
         `${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`
       );
       setWishlistedProducts((prev) => prev.filter((p) => p.id !== productId));
       if (selectedProductForModal && selectedProductForModal.id === productId) {
-        handleCloseModal();
+        handleCloseModal(); 
       }
-      alert(`"${productName}" đã được xóa khỏi danh sách yêu thích.`);
     } catch (err) {
       console.error("Error removing from wishlist:", err);
       alert(`Lỗi khi xóa sản phẩm: ${err.response?.data?.message || err.message}`);
@@ -131,18 +155,34 @@ const WishlistPage = () => {
     setSelectedProductForModal(null);
   };
 
-  const handleAddToCartFromModal = (product, e) => {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    
-    if (product.stockQuantity === 0) {
-        alert("Sản phẩm này đã hết hàng!");
-        return;
+  const handleAddToCartFromWishlistModal = async (product, event, quantity = 1) => {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+
+    if (!product || !product.id) {
+        alert('Sản phẩm không hợp lệ.');
+        return false;
     }
+    if (product.stockQuantity === 0) {
+        alert(`Sản phẩm "${product.name}" đã hết hàng.`);
+        return false;
+    }
+    if (product.stockQuantity < quantity) {
+        alert(`Chỉ còn ${product.stockQuantity} sản phẩm "${product.name}".`);
+        return false;
+    }
+
+    const success = await contextAddToCart(product, quantity);
+    if (success) {
+        setSelectedProductForModal(prev => prev ? {...prev, stockQuantity: Math.max(0, prev.stockQuantity - quantity)} : null);
+
+        if (window.confirm(`"${product.name}" đã được thêm vào giỏ. Bạn có muốn xóa khỏi Wishlist không?`)) {
+          handleRemoveFromWishlist(product.id, product.name);
+        }
+    }
+    return success;
   };
 
-
-  // Pagination
   const totalItems = wishlistedProducts.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -151,7 +191,6 @@ const WishlistPage = () => {
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    //window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isLoading) {
@@ -190,8 +229,8 @@ const WishlistPage = () => {
         <div className="bg-white p-4 sm:p-5 rounded-lg shadow mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex items-center text-gray-600">
             <FaFilter className="mr-2 text-pink-500 text-lg" />
-            <select 
-                className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm bg-gray-50 cursor-not-allowed" 
+            <select
+                className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm bg-gray-50 cursor-not-allowed"
                 disabled
             >
               <option value="">Tất cả nhóm (chưa hỗ trợ)</option>
@@ -221,8 +260,8 @@ const WishlistPage = () => {
             <p className="text-gray-500 mb-6 text-center max-w-sm">
                 Thêm các sản phẩm bạn quan tâm vào đây để dễ dàng theo dõi nhé.
             </p>
-            <Link 
-                to="/" 
+            <Link
+                to="/"
                 className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-lg hover:bg-pink-700 transition-colors text-lg shadow-md hover:shadow-lg"
             >
               Khám phá sản phẩm
@@ -236,7 +275,7 @@ const WishlistPage = () => {
                   key={product.id}
                   product={product}
                   onRemove={handleRemoveFromWishlist}
-                  onClickCard={handleOpenProductModal} 
+                  onClickCard={handleOpenProductModal}
                 />
               ))}
             </div>
@@ -282,9 +321,12 @@ const WishlistPage = () => {
           <ProductDetailModal
               product={selectedProductForModal}
               onClose={handleCloseModal}
-              onAddToCart={handleAddToCartFromModal}
+              onAddToCart={handleAddToCartFromWishlistModal}
+              isAddingToCart={cartAddingStatus && cartAddingStatus[selectedProductForModal.id]}
               wishlistStatus={true} 
-              onToggleWishlist={() => handleRemoveFromWishlist(selectedProductForModal.id, selectedProductForModal.name)}
+              onToggleWishlist={(productId, productName) => {
+                  handleRemoveFromWishlist(productId, productName);
+              }}
           />
       )}
     </div>

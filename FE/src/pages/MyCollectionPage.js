@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FaPlusCircle,
   FaFilter,
@@ -8,58 +8,72 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTrashAlt,
+  FaShoppingCart, // Thêm icon giỏ hàng nếu dùng
 } from 'react-icons/fa';
 import axios from 'axios';
-import ProductDetailModal from '../components/ProductDetailModal'; 
+import ProductDetailModal from '../components/ProductDetailModal';
+import { useCart } from '../contexts/CartContext'; // Import useCart
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const MOCK_USER_ID = 2;
 const ITEMS_PER_PAGE = 10;
 
-const SimpleProductCard = ({ product, onRemove, onClickCard }) => ( 
-  <div 
-    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-0.5 hover:scale-105 overflow-hidden"
-    onClick={() => onClickCard(product)} 
-    style={{cursor: 'pointer'}}
+const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
+  <div
+    className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative"
+    onClick={() => onClickCard(product)}
+    style={{ cursor: 'pointer' }}
   >
-    <div className="relative w-full pb-[120%] bg-gray-100">
-       <div style={{ paddingTop: '10%' }} /> 
-            <div className="absolute inset-0 bg-[#f1f3f6] p-[10px] sm:p-[15px] md:p-[20px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
-                <img
-                    src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                    alt={product.name}
-                    className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                />
-            </div>
+    <div className="relative">
+      <div style={{ paddingTop: '135%' }} />
+      <div className="absolute inset-0 bg-[#e5e7eb] p-[20px] sm:p-[30px] md:p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+        <img
+          src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+          alt={product.name}
+          className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+        />
+      </div>
       {onRemove && (
         <button
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation(); 
+            e.stopPropagation();
             onRemove(product.id, product.name);
           }}
           title="Remove from Collection"
-          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-shadow shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 z-10"
         >
-          <FaTrashAlt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <FaTrashAlt className="w-3.5 h-3.5" />
         </button>
       )}
     </div>
-    <div className="p-3 flex flex-col">
-      {product.group?.name && (
-        <p className="text-xs font-medium text-gray-400 mb-1 truncate">
-          {product.group.name}
-        </p>
-      )}
-      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-1" title={product.name}>
-        {product.name}
-      </h3>
-      {product.version && (
-        <p className="text-xs text-gray-500 mb-2">Ver. {product.version}</p>
-      )}
-      <p className="mt-auto text-sm font-bold text-pink-600">
-        ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
-      </p>
+    <div className="p-3.5 flex-grow flex flex-col justify-between">
+      <div>
+        {product.group?.name && (
+          <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">
+            {product.group.name.toUpperCase()}
+          </p>
+        )}
+        <h3
+          className="text-[0.9rem] sm:text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-snug line-clamp-2 min-h-[2.4em]"
+          title={product.name}
+        >
+          {product.name}
+        </h3>
+        {product.version && (
+          <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
+        )}
+      </div>
+      <div className="mt-2.5">
+        <div className="flex justify-between items-center">
+          <p className="text-md font-bold text-pink-600">
+            ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
+          </p>
+           <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
+            </p>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -71,8 +85,9 @@ const MyCollectionPage = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('date_added_desc');
-
   const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+
+  const { addToCart: contextAddToCart, addingToCart: cartAddingStatus } = useCart();
 
   useEffect(() => {
     if (selectedProductForModal) {
@@ -92,9 +107,9 @@ const MyCollectionPage = () => {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/users/${MOCK_USER_ID}/collections`,
-        { params: { sortBy: sortOption } } 
+        { params: { sortBy: sortOption } }
       );
-      setMyCollectedProducts(response.data || []); 
+      setMyCollectedProducts(response.data || []);
     } catch (err) {
       console.error("Error fetching collection:", err);
       setError(err.response?.data?.message || err.message || 'Không thể tải bộ sưu tập.');
@@ -102,7 +117,7 @@ const MyCollectionPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [sortOption]); 
+  }, [sortOption]);
 
   useEffect(() => {
     fetchCollectedProducts();
@@ -129,19 +144,32 @@ const MyCollectionPage = () => {
   const handleCloseModal = () => {
     setSelectedProductForModal(null);
   };
-  
-  const handleAddToCartFromModal = (product, e) => {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    
-    if (product.stockQuantity === 0) {
-        alert("Sản phẩm này đã hết hàng (thông tin từ collection)!");
-        return;
+
+  const handleAddToCartFromCollectionModal = async (product, event, quantity = 1) => {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+
+    if (!product || !product.id) {
+        alert('Sản phẩm không hợp lệ.');
+        return false;
     }
+    if (product.stockQuantity === 0) {
+        alert(`Sản phẩm "${product.name}" đã hết hàng.`);
+        return false;
+    }
+    if (product.stockQuantity < quantity) {
+        alert(`Chỉ còn ${product.stockQuantity} sản phẩm "${product.name}".`);
+        return false;
+    }
+
+    const success = await contextAddToCart(product, quantity);
+    if (success) {
+        setSelectedProductForModal(prev => prev ? {...prev, stockQuantity: Math.max(0, prev.stockQuantity - quantity)} : null);
+    }
+    return success;
   };
 
 
-  // Pagination
   const totalItems = myCollectedProducts.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -150,7 +178,6 @@ const MyCollectionPage = () => {
   const goToPage = page => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    //window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isLoading) return (
@@ -165,8 +192,8 @@ const MyCollectionPage = () => {
       <FaTimesCircle className="mx-auto text-4xl text-red-400 mb-3" />
       <h3 className="text-lg font-semibold text-gray-800 mb-2">Rất tiếc, đã xảy ra lỗi!</h3>
       <p className="text-sm text-red-600 mb-4">{error}</p>
-      <button 
-        onClick={fetchCollectedProducts} 
+      <button
+        onClick={fetchCollectedProducts}
         className="px-4 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700 transition-colors"
       >
         Thử lại
@@ -189,7 +216,7 @@ const MyCollectionPage = () => {
           <div className="flex items-center text-gray-600">
             <FaFilter className="mr-2 text-pink-500 text-lg" />
             <select
-              disabled 
+              disabled
               className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm bg-gray-50 cursor-not-allowed"
             >
               <option>Tất cả nhóm (chưa hỗ trợ)</option>
@@ -219,8 +246,8 @@ const MyCollectionPage = () => {
             <p className="text-gray-500 mb-6 text-center max-w-sm">
               Hãy bắt đầu khám phá và thêm những sản phẩm yêu thích vào bộ sưu tập nhé.
             </p>
-            <Link 
-                to="/" 
+            <Link
+                to="/"
                 className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-lg hover:bg-pink-700 transition-colors text-lg shadow-md hover:shadow-lg"
             >
               Khám phá sản phẩm
@@ -234,7 +261,7 @@ const MyCollectionPage = () => {
                   key={product.id}
                   product={product}
                   onRemove={handleRemoveFromCollection}
-                  onClickCard={handleOpenProductModal} 
+                  onClickCard={handleOpenProductModal}
                 />
               ))}
             </div>
@@ -254,8 +281,8 @@ const MyCollectionPage = () => {
                     key={page}
                     onClick={() => goToPage(page)}
                     className={`px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
-                      currentPage === page 
-                        ? 'bg-pink-600 text-white border-pink-600' 
+                      currentPage === page
+                        ? 'bg-pink-600 text-white border-pink-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -280,9 +307,14 @@ const MyCollectionPage = () => {
           <ProductDetailModal
               product={selectedProductForModal}
               onClose={handleCloseModal}
-              onAddToCart={handleAddToCartFromModal} 
-              wishlistStatus={false} 
-              onToggleWishlist={() => alert("Chức năng Wishlist không áp dụng cho modal từ Collection.")} 
+              onAddToCart={handleAddToCartFromCollectionModal}
+              isAddingToCart={cartAddingStatus && cartAddingStatus[selectedProductForModal.id]}
+              wishlistStatus={false}
+              onToggleWishlist={() => alert("Chức năng Wishlist không áp dụng cho sản phẩm này.")}
+              collectionStatus={true}
+              onToggleCollection={(productId, productName) => {
+                  handleRemoveFromCollection(productId, productName);
+              }}
           />
       )}
     </div>
