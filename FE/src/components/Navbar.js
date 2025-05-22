@@ -84,9 +84,9 @@ const Navbar = () => {
                             <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Wishlist
                             </NavLink>
-                            {/* <NavLink to="/bubble" className={navLinkClasses} onClick={closeMobileMenu}>
-                                Bubble
-                            </NavLink> */}
+                            <NavLink to="/myorder" className={navLinkClasses} onClick={closeMobileMenu}>
+                                My Order
+                            </NavLink>
                         </div>
                     </div>
 

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTimes, FaShoppingCart, FaRegHeart, FaHeart, FaSpinner, FaCheckSquare, FaPlusSquare } from 'react-icons/fa'; 
+import { FaTimes, FaShoppingCart, FaRegHeart, FaHeart, FaSpinner, FaCheckSquare, FaPlusSquare } from 'react-icons/fa';
 
 const ProductDetailModal = ({
     product,
     onClose,
-    onAddToCart,        
+    onAddToCart,
     wishlistStatus,
     onToggleWishlist,
-    isAddingToCart,   
-    collectionStatus,   
-    onToggleCollection 
+    isAddingToCart,
+    collectionStatus,
+    onToggleCollection
 }) => {
     const [modalFeedback, setModalFeedback] = useState({ type: '', text: '' });
 
@@ -18,7 +18,7 @@ const ProductDetailModal = ({
         if (product) {
             setModalFeedback({ type: '', text: '' });
         }
-    }, [product]); 
+    }, [product]);
 
     if (!product) return null;
 
@@ -37,12 +37,12 @@ const ProductDetailModal = ({
         }
 
         try {
-            const success = await onAddToCart(product, e, 1); 
-            console.log("ProductDetailModal: onAddToCart returned ->", success); 
+            const success = await onAddToCart(product, e, 1);
+            console.log("ProductDetailModal: onAddToCart returned ->", success);
 
-            if (success === true) { 
+            if (success === true) {
                 setModalFeedback({ type: 'success', text: 'Đã thêm vào giỏ!' });
-            } else if (success === false) { 
+            } else if (success === false) {
                 setModalFeedback({ type: 'error', text: 'Không thể thêm. Vui lòng thử lại. (M2)' });
             } else {
                 console.warn("ProductDetailModal: onAddToCart returned unexpected value:", success);
@@ -62,7 +62,7 @@ const ProductDetailModal = ({
 
     const handleToggleCollectionInModal = (e) => {
         e.stopPropagation();
-        if (onToggleCollection) { 
+        if (onToggleCollection) {
             onToggleCollection(product.id, product.name);
         }
     };
@@ -73,12 +73,12 @@ const ProductDetailModal = ({
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-8 animate-modalFadeInScaleUp transition-all relative"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-8 animate-modalFadeInScaleUp transition-all relative" // Thêm relative để absolute positioning của nút X hoạt động đúng
                 onClick={handleModalContentClick}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10 p-2 rounded-full hover:bg-slate-100"
+                    className="absolute top-1 right-1 text-slate-400 hover:text-slate-600 transition-colors z-10 p-2 rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
                     aria-label="Close modal"
                 >
                     <FaTimes className="w-5 h-5" />
@@ -131,7 +131,6 @@ const ProductDetailModal = ({
                                 : 'Hết hàng'}
                         </p>
 
-                        {/* Feedback Message trong Modal */}
                         {modalFeedback.text && (
                             <div className={`mb-3 p-2 text-xs rounded-md text-center
                                 ${modalFeedback.type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`}>
@@ -139,7 +138,6 @@ const ProductDetailModal = ({
                             </div>
                         )}
 
-                        {/* Actions */}
                         <div className="mt-auto pt-5 border-t border-slate-200 flex flex-col sm:flex-row gap-3">
                             <button
                                 onClick={handleAddToCartInModal}
@@ -171,8 +169,7 @@ const ProductDetailModal = ({
                                     {wishlistStatus ? 'Trong Wishlist' : 'Wishlist'}
                                 </span>
                             </button>
-                            {/* Nút Collection */}
-                            {onToggleCollection && ( 
+                            {onToggleCollection && (
                                 <button
                                     onClick={handleToggleCollectionInModal}
                                     className={`w-full sm:w-auto border px-5 py-3 rounded-xl font-medium flex items-center justify-center gap-2
@@ -193,9 +190,9 @@ const ProductDetailModal = ({
 
                         {product.id && (
                             <Link
-                                to={`/products/${product.id}`} 
+                                to={`/products/${product.id}`}
                                 className="mt-4 text-center text-sm text-indigo-600 hover:underline hover:text-indigo-700"
-                                onClick={onClose}
+                                onClick={onClose} 
                             >
                                 Xem trang chi tiết sản phẩm
                             </Link>
