@@ -16,27 +16,25 @@ export const CartProvider = ({ children }) => {
     const [updatingItem, setUpdatingItem] = useState({});
     const [removingItem, setRemovingItem] = useState({});
 
-    // Hàm helper để cập nhật state cart từ dữ liệu server
     const updateCartStateFromServer = (dataFromServer) => {
-        if (dataFromServer && typeof dataFromServer.items !== 'undefined') { // Kiểm tra items để chắc chắn là cấu trúc cart
+        console.log("Data from server for cart update:", JSON.stringify(dataFromServer, null, 2));
+        if (dataFromServer && typeof dataFromServer.items !== 'undefined') { 
             setCart({
                 orderId: dataFromServer.orderId,
-                items: dataFromServer.items, // Backend nên đảm bảo items được sắp xếp (ví dụ theo orderItemId)
+                items: dataFromServer.items, 
                 totalQuantity: dataFromServer.totalQuantity || 0,
                 totalAmount: dataFromServer.totalAmount || 0,
-                status: dataFromServer.status || 'PENDING' // Lấy status nếu có, hoặc mặc định
+                status: dataFromServer.status || 'PENDING' 
             });
         } else {
-            // Nếu dữ liệu không đúng cấu trúc, có thể là lỗi hoặc backend không trả về như mong đợi
-            console.warn("Received unexpected cart data structure from server. Refetching cart.");
-            fetchCart(); // Gọi lại fetchCart như một fallback an toàn
+            fetchCart(); 
         }
     };
 
 
     const fetchCart = useCallback(async () => {
         if (!MOCK_USER_ID) {
-            setLoadingCart(false); // Không có user ID, không fetch
+            setLoadingCart(false); 
             setCart({ orderId: null, items: [], totalQuantity: 0, totalAmount: 0, status: 'PENDING' });
             return;
         }

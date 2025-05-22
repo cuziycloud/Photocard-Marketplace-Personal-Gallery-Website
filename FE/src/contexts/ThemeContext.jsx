@@ -1,4 +1,3 @@
-// src/contexts/ThemeContext.jsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const ThemeContext = createContext(undefined);
@@ -12,10 +11,6 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  // Hàm getInitialTheme:
-  // 1. Ưu tiên theme đã lưu trong localStorage.
-  // 2. Nếu không có, ưu tiên theme hệ thống (prefers-color-scheme).
-  // 3. Mặc định là 'light'.
   const getInitialTheme = () => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const storedPrefs = window.localStorage.getItem('color-theme');
@@ -28,19 +23,18 @@ export const ThemeProvider = ({ children }) => {
         return 'dark';
       }
     }
-    return 'light'; // Mặc định hoặc nếu không thể truy cập localStorage/matchMedia
+    return 'light'; 
   };
 
   const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
-    const root = window.document.documentElement; // Thẻ <html>
+    const root = window.document.documentElement; 
     const isDark = theme === 'dark';
 
     root.classList.remove(isDark ? 'light' : 'dark');
     root.classList.add(theme);
 
-    // Lưu lựa chọn vào localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('color-theme', theme);
     }
@@ -50,7 +44,6 @@ export const ThemeProvider = ({ children }) => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  // Script để áp dụng theme ngay từ đầu, tránh FOUC (Flash Of Unstyled Content)
   const blockingScript = `
     (function() {
       function getInitialTheme() {
