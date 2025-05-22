@@ -8,11 +8,11 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTrashAlt,
-  FaShoppingCart, // Thêm icon giỏ hàng nếu dùng
+  FaCheckCircle
 } from 'react-icons/fa';
 import axios from 'axios';
 import ProductDetailModal from '../components/ProductDetailModal';
-import { useCart } from '../contexts/CartContext'; // Import useCart
+import { useCart } from '../contexts/CartContext';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 const MOCK_USER_ID = 2;
@@ -25,14 +25,36 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
     style={{ cursor: 'pointer' }}
   >
     <div className="relative">
-      <div style={{ paddingTop: '135%' }} />
+      <div style={{ paddingTop: '135%' }} /> 
       <div className="absolute inset-0 bg-[#e5e7eb] p-[20px] sm:p-[30px] md:p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
         <img
           src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
           alt={product.name}
-          className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+          className="block max-w-full max-h-full object-contain rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105" // object-contain để thấy rõ card
         />
       </div>
+    </div>
+
+    <div className="p-3 flex-grow flex flex-col"> 
+      {product.group?.name && (
+        <p className="text-[0.65rem] text-slate-400 mb-0.5 truncate tracking-wide">
+          {product.group.name.toUpperCase()}
+        </p>
+      )}
+      <h3
+        className="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-tight line-clamp-2 min-h-[2.5em]" // Điều chỉnh min-h và leading
+        title={product.name}
+      >
+        {product.name}
+      </h3>
+       {product.version && (
+          <p className="text-[0.7rem] text-slate-500 mt-0.5 mb-1">Ver: {product.version}</p>
+        )}
+
+      <p className="text-base font-bold text-pink-600 mt-1 mb-2"> 
+        ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
+      </p>
+
       {onRemove && (
         <button
           onClick={(e) => {
@@ -40,40 +62,12 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
             e.stopPropagation();
             onRemove(product.id, product.name);
           }}
-          title="Remove from Collection"
-          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 z-10"
-        >
-          <FaTrashAlt className="w-3.5 h-3.5" />
+          title="Xóa khỏi Bộ sưu tập"
+          className="mt-auto w-full text-xs sm:text-sm py-2 px-3 rounded-md border border-teal-400 bg-teal-50 text-teal-600 flex items-center justify-center gap-1.5">
+            <FaCheckCircle className="w-3.5 h-3.5" />
+            <span>Collected</span>
         </button>
       )}
-    </div>
-    <div className="p-3.5 flex-grow flex flex-col justify-between">
-      <div>
-        {product.group?.name && (
-          <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">
-            {product.group.name.toUpperCase()}
-          </p>
-        )}
-        <h3
-          className="text-[0.9rem] sm:text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-snug line-clamp-2 min-h-[2.4em]"
-          title={product.name}
-        >
-          {product.name}
-        </h3>
-        {product.version && (
-          <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>
-        )}
-      </div>
-      <div className="mt-2.5">
-        <div className="flex justify-between items-center">
-          <p className="text-md font-bold text-pink-600">
-            ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
-          </p>
-           <p className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${product.stockQuantity > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                {product.stockQuantity > 0 ? `Còn ${product.stockQuantity}` : 'Hết hàng'}
-            </p>
-        </div>
-      </div>
     </div>
   </div>
 );
