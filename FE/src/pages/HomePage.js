@@ -5,9 +5,9 @@ import {
     FaShoppingCart,
     FaChevronLeft,
     FaChevronRight,
-    FaPlusSquare,     
-    FaCheckSquare,    
-    FaSpinner       
+    FaPlusSquare,
+    FaCheckSquare,
+    FaSpinner
 } from 'react-icons/fa';
 import axios from 'axios';
 import { useCategory } from '../contexts/CategoryContext';
@@ -20,13 +20,13 @@ const PRODUCTS_PER_PAGE = 15;
 const MOCK_USER_ID = 2;
 
 const shuffleArray = (array) => {
-if (!array || array.length === 0) return [];
-const newArray = [...array];
-for (let i = newArray.length - 1; i > 0; i--) {
+  if (!array || array.length === 0) return [];
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-}
-return newArray;
+  }
+  return newArray;
 };
 
 const HomePage = () => {
@@ -35,18 +35,14 @@ const HomePage = () => {
     const { addToCart, addingToCart: cartAddingStatus, cartError: cartContextError } = useCart();
 
     const [allFetchedProducts, setAllFetchedProducts] = useState([]);
-    const [shuffledInitialProducts, setShuffledInitialProducts] = useState([]); 
     const [displayedProducts, setDisplayedProducts] = useState([]);
-
-    const [loading, setLoading] = useState(true);       
-    const [isProcessing, setIsProcessing] = useState(false); 
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [wishlistStatus, setWishlistStatus] = useState({});
-    const [collectionStatus, setCollectionStatus] = useState({}); 
+    const [collectionStatus, setCollectionStatus] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedProductForModal, setSelectedProductForModal] = useState(null);
     const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null });
-    const [productListKey, setProductListKey] = useState(Date.now()); 
 
     useEffect(() => {
         if (selectedProductForModal) {
@@ -60,10 +56,9 @@ const HomePage = () => {
     }, [selectedProductForModal]);
 
     const fetchProductsAndAllStatuses = useCallback(async (currentGroupId) => {
-        setLoading(true); 
+        setLoading(true);
         setError(null);
         setAllFetchedProducts([]);
-        setShuffledInitialProducts([]); 
 
         try {
             const params = currentGroupId ? { groupId: currentGroupId } : {};
@@ -71,11 +66,10 @@ const HomePage = () => {
             const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
 
             setAllFetchedProducts(fetchedProducts);
-            setShuffledInitialProducts(shuffleArray(fetchedProducts)); 
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
                 const productIds = fetchedProducts.map(p => p.id);
-                 const wishlistPromises = productIds.map(productId =>
+                const wishlistPromises = productIds.map(productId =>
                     axios.get(`${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/check/${productId}`)
                         .then(res => ({ [productId]: res.data.isInWishlist }))
                         .catch(() => ({ [productId]: false }))
@@ -85,7 +79,7 @@ const HomePage = () => {
                         .then(res => ({ [productId]: res.data.isInCollection }))
                         .catch(() => ({ [productId]: false }))
                 );
-                
+
                 const [wishlistResults, collectionResults] = await Promise.all([
                     Promise.all(wishlistPromises),
                     Promise.all(collectionPromises)
@@ -101,26 +95,24 @@ const HomePage = () => {
             console.error("Error fetching products or statuses:", err);
             setError("Không thể tải danh sách sản phẩm hoặc trạng thái.");
             setAllFetchedProducts([]);
-            setShuffledInitialProducts([]);
             setWishlistStatus({});
             setCollectionStatus({});
-        } 
-    }, [MOCK_USER_ID]); 
+        } finally {
+            setLoading(false);
+        }
+    }, [MOCK_USER_ID]);
 
     useEffect(() => {
         const groupId = selectedCategory ? selectedCategory.id : null;
-        fetchProductsAndAllStatuses(groupId)
+        const handler = setTimeout(() => {
+            fetchProductsAndAllStatuses(groupId);
+        }, 50); 
+
+        return () => clearTimeout(handler); 
     }, [selectedCategory, fetchProductsAndAllStatuses]);
 
-
     useEffect(() => {
-        if (loading) { 
-            setIsProcessing(true);
-        } else {
-            setIsProcessing(true);
-        }
-        
-        let productsToProcess = [...allFetchedProducts];
+        let productsToProcess = shuffleArray([...allFetchedProducts]);
 
         if (searchTerm && searchTerm.trim() !== '') {
             const lowerSearchTerm = searchTerm.toLowerCase();
@@ -144,40 +136,21 @@ const HomePage = () => {
                 });
             });
         }
-        
-        if (sortOption === 'default') {
-            productsToProcess = shuffleArray(productsToProcess); 
-        } else if (sortOption) { 
+
+        if (sortOption !== 'default' && sortOption) {
             switch (sortOption) {
                 case 'price-asc': productsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity)); break;
                 case 'price-desc': productsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity)); break;
                 case 'name-asc': productsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
                 case 'name-desc': productsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || "")); break;
                 case 'newest': productsToProcess.sort((a, b) => (b.id || 0) - (a.id || 0)); break;
-                default: break; 
+                default: break;
             }
         }
-        
-        const timer = setTimeout(() => {
-            setDisplayedProducts(productsToProcess);
-            setCurrentPage(1);
-            setIsProcessing(false); 
-            setProductListKey(Date.now()); 
-        }, 50); 
 
-        return () => clearTimeout(timer);
-
-    }, [allFetchedProducts, searchTerm, sortOption, activeFilters, loading]); 
-
-    useEffect(()=>{
-        if(!isProcessing && loading && allFetchedProducts.length > 0){ 
-            setLoading(false);
-        }
-        else if (!isProcessing && loading && allFetchedProducts.length === 0 && !error){
-            setLoading(false);
-        }
-    }, [isProcessing, allFetchedProducts, loading, error]);
-
+        setDisplayedProducts(productsToProcess);
+        setCurrentPage(1);
+    }, [allFetchedProducts, searchTerm, sortOption, activeFilters]);
 
     const handleResetFiltersAndSearch = () => {
         setSearchTerm('');
@@ -226,6 +199,7 @@ const HomePage = () => {
             p.id === productId ? { ...p, stockQuantity: newStockQuantity } : p
         );
         setAllFetchedProducts(prev => updateList(prev));
+        setDisplayedProducts(prev => updateList(prev));
 
         if (selectedProductForModal && selectedProductForModal.id === productId) {
             setSelectedProductForModal(prev => prev ? { ...prev, stockQuantity: newStockQuantity } : null);
@@ -240,33 +214,34 @@ const HomePage = () => {
             console.error("HomePage: handleAddToCart - Invalid product data", product);
             setFeedbackMessage({ type: 'error', text: 'Sản phẩm không hợp lệ!', productId: product?.id || null });
             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
-            return false; 
+            return false;
         }
 
         if (product.stockQuantity === 0 && quantity > 0) {
             setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
-            return false; 
+            return false;
         }
         if (product.stockQuantity < quantity) {
             setFeedbackMessage({ type: 'error', text: `Chỉ còn ${product.stockQuantity} sản phẩm!`, productId: product.id });
             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
-            return false; 
+            return false;
         }
 
         const success = await addToCart(product, quantity);
 
         if (success) {
             setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
-            const newStock = Math.max(0, product.stockQuantity - quantity); 
+            const newStock = Math.max(0, product.stockQuantity - quantity);
             updateProductStockInLists(product.id, newStock);
         } else {
             setFeedbackMessage({ type: 'error', text: cartContextError || 'Lỗi khi thêm vào giỏ!', productId: product.id });
         }
         setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
-        
-        return success; 
-    }, [addToCart, cartContextError, updateProductStockInLists]); 
+
+        return success;
+    }, [addToCart, cartContextError]);
+
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
     };
@@ -284,113 +259,54 @@ const HomePage = () => {
     const goToPage = (page) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
-            //window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
     const renderPaginationButtons = () => {
         const pageNumbers = [];
         const SIBLING_COUNT = 1;
-        const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3; 
+        const TOTAL_NUMBERS_TO_SHOW = SIBLING_COUNT * 2 + 3;
         const SHOW_LEFT_ELLIPSIS = 'SHOW_LEFT_ELLIPSIS';
         const SHOW_RIGHT_ELLIPSIS = 'SHOW_RIGHT_ELLIPSIS';
 
-        if (totalPages <= TOTAL_NUMBERS_TO_SHOW) { 
+        if (totalPages <= TOTAL_NUMBERS_TO_SHOW) {
             for (let i = 1; i <= totalPages; i++) {
                 pageNumbers.push(i);
             }
-        } else { 
+        } else {
             const leftSiblingIndex = Math.max(currentPage - SIBLING_COUNT, 1);
             const rightSiblingIndex = Math.min(currentPage + SIBLING_COUNT, totalPages);
+            const shouldShowLeftEllipsis = leftSiblingIndex > 2;
+            const shouldShowRightEllipsis = rightSiblingIndex < totalPages - 1;
 
-            const shouldShowLeftEllipsis = leftSiblingIndex > 2; 
-            const shouldShowRightEllipsis = rightSiblingIndex < totalPages - 1; 
+            pageNumbers.push(1);
+            if (shouldShowLeftEllipsis) pageNumbers.push(SHOW_LEFT_ELLIPSIS);
 
-            pageNumbers.push(1); 
-
-            if (shouldShowLeftEllipsis) {
-                pageNumbers.push(SHOW_LEFT_ELLIPSIS);
-            }
-            
-            let startPageForRange = leftSiblingIndex;
-            if (shouldShowLeftEllipsis && startPageForRange === 2 && leftSiblingIndex > 1) startPageForRange++; 
-            
-            let endPageForRange = rightSiblingIndex;
-            if (shouldShowRightEllipsis && endPageForRange === totalPages -1 && rightSiblingIndex < totalPages) endPageForRange--; 
-
-            for (let i = startPageForRange; i <= endPageForRange; i++) {
-                if (i > 1 && i < totalPages) { 
-                    if(!pageNumbers.includes(i)) pageNumbers.push(i);
-                }
-            }
-            
-            if (shouldShowRightEllipsis) {
-                 if (pageNumbers[pageNumbers.length - 1] !== totalPages - 1 || (pageNumbers[pageNumbers.length-1] === currentPage && currentPage < totalPages -1 && !pageNumbers.includes(totalPages-1) ) ) {
-                    if(endPageForRange < totalPages -1 ) pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
-                }
+            for (let i = leftSiblingIndex; i <= rightSiblingIndex; i++) {
+                if (i > 1 && i < totalPages) pageNumbers.push(i);
             }
 
-            if (totalPages > 1 && !pageNumbers.includes(totalPages)) { 
-                pageNumbers.push(totalPages);
-            }
-            
-            const cleanedPageNumbers = [];
-            let lastPushed = null;
-            for (const p of pageNumbers) {
-                if (typeof p === 'string' && p === lastPushed) continue;
-                if (typeof p === 'number' && p === lastPushed) continue;
-                
-                if (p === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers.includes(2) && cleanedPageNumbers[cleanedPageNumbers.length-1] === 1) {
-                    if (pageNumbers.includes(2) && pageNumbers.indexOf(2) === pageNumbers.indexOf(p) + 1 && !cleanedPageNumbers.includes(2)) {
-                         cleanedPageNumbers.push(2); lastPushed = 2; continue;
-                    }
-                }
-                 if (p === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers.includes(totalPages - 1) && cleanedPageNumbers[cleanedPageNumbers.length -1 ] === totalPages -1 && !pageNumbers.includes(totalPages)) {
-                    if (pageNumbers.includes(totalPages) && pageNumbers.indexOf(totalPages) === pageNumbers.indexOf(p) + 1) {
-                        lastPushed = p; continue;
-                    }
-                }
-                cleanedPageNumbers.push(p);
-                lastPushed = p;
-            }
-            if (cleanedPageNumbers.length > 2 && cleanedPageNumbers[0] === 1 && cleanedPageNumbers[1] === SHOW_LEFT_ELLIPSIS && cleanedPageNumbers[2] === 2) {
-                cleanedPageNumbers.splice(1, 1);
-            }
-            const lastIdxCleaned = cleanedPageNumbers.length -1;
-            if (lastIdxCleaned > 1 && cleanedPageNumbers[lastIdxCleaned] === totalPages && cleanedPageNumbers[lastIdxCleaned-1] === SHOW_RIGHT_ELLIPSIS && cleanedPageNumbers[lastIdxCleaned-2] === totalPages -1) {
-                cleanedPageNumbers.splice(lastIdxCleaned-1, 1);
-            }
-
-
-            return cleanedPageNumbers.map((page, index) => {
-                if (page === SHOW_LEFT_ELLIPSIS || page === SHOW_RIGHT_ELLIPSIS) {
-                    return <span key={page + `-${index}`} className="px-2 py-2 text-slate-500 text-sm">...</span>;
-                }
-                return (
-                    <button
-                        key={page}
-                        onClick={() => goToPage(page)}
-                        className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors ${currentPage === page ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-                    >
-                        {page}
-                    </button>
-                );
-            });
+            if (shouldShowRightEllipsis) pageNumbers.push(SHOW_RIGHT_ELLIPSIS);
+            if (totalPages > 1) pageNumbers.push(totalPages);
         }
 
-        return pageNumbers.map(page => (
-            <button
-                key={page}
-                onClick={() => goToPage(page)}
-                className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors ${currentPage === page ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-            >
-                {page}
-            </button>
-        ));
+        return pageNumbers.map((page, index) => {
+            if (page === SHOW_LEFT_ELLIPSIS || page === SHOW_RIGHT_ELLIPSIS) {
+                return <span key={page + `-${index}`} className="px-2 py-2 text-slate-500 text-sm">...</span>;
+            }
+            return (
+                <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`px-3.5 py-2 rounded-md border text-sm font-medium transition-colors ${currentPage === page ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                >
+                    {page}
+                </button>
+            );
+        });
     };
 
-
-    if (loading) { 
+    if (loading && displayedProducts.length === 0 && !error) {
         return (
             <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
                 <FaSpinner className="animate-spin text-4xl text-pink-600" />
@@ -417,18 +333,9 @@ const HomePage = () => {
         );
     }
 
-    const showProcessingSpinner = isProcessing;
-
     return (
         <div className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0 font-['Inter',_sans-serif] min-h-screen">
-            {showProcessingSpinner && !loading && (
-                <div className="fixed inset-0 flex items-center justify-center bg-white/70 z-50">
-                    <FaSpinner className="animate-spin text-4xl text-pink-500" />
-                    <p className="ml-3 text-slate-700">Đang xử lý...</p>
-                </div>
-            )}
-
-            {!loading && !isProcessing && displayedProducts.length === 0 && (
+            {!loading && displayedProducts.length === 0 && (
                 <div className="text-center p-10 bg-white rounded-lg shadow max-w-md mx-auto mt-10">
                     <FaShoppingCart className="mx-auto text-5xl text-slate-300 mb-4" />
                     <p className="text-lg font-medium text-slate-700">
@@ -445,30 +352,25 @@ const HomePage = () => {
                 </div>
             )}
 
-            {/* Danh sách sản phẩm */}
-            {!loading && displayedProducts.length > 0 && (
+            {displayedProducts.length > 0 && (
                 <>
-                    <div
-                        key={productListKey} 
-                        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 animate-fadeInUpGrid 
-                                   ${showProcessingSpinner ? 'opacity-30 pointer-events-none' : 'opacity-100'}`} // Keep opacity for smooth transition with processing spinner
-                    >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 transition-opacity duration-300">
                         {paginatedProducts.map(product => (
                             <div
                                 key={product.id}
                                 className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative"
                                 onClick={() => handleOpenProductModal(product)}
-                                style={{cursor: 'pointer'}}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <div className="relative">
                                     <div style={{ paddingTop: '135%' }} />
-                                        <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
-                                            <img
-                                                src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                alt={product.name}
-                                                className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                                            />
-                                        </div>
+                                    <div className="absolute inset-0 bg-[#e5e7eb] p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
+                                        <img
+                                            src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                            alt={product.name}
+                                            className="block max-w-full max-h-full object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
+                                        />
+                                    </div>
                                     <button
                                         className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors text-slate-500 hover:text-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 z-10"
                                         onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id, product.name); }}
@@ -479,7 +381,7 @@ const HomePage = () => {
                                     <button
                                         className={`absolute bottom-2.5 left-2.5 bg-indigo-500 text-white p-1.5 rounded-full shadow-md hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 z-10
                                             ${product.stockQuantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-                                            ${cartAddingStatus && cartAddingStatus[product.id] ? 'opacity-70 animate-pulse' : ''} `}
+                                            ${cartAddingStatus && cartAddingStatus[product.id] ? 'opacity-70 animate-pulse' : ''}`}
                                         onClick={(e) => handleAddToCart(product, e)}
                                         aria-label="Add to Cart"
                                         disabled={product.stockQuantity === 0 || !!(cartAddingStatus && cartAddingStatus[product.id])}
@@ -488,7 +390,7 @@ const HomePage = () => {
                                     </button>
                                     <button
                                         className={`absolute bottom-2.5 right-2.5 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-1 z-10
-                                            ${collectionStatus[product.id] ? 'text-teal-500 hover:text-teal-600 focus:ring-teal-500' : 'text-slate-500 hover:text-teal-500 focus:ring-teal-500'} `}
+                                            ${collectionStatus[product.id] ? 'text-teal-500 hover:text-teal-600 focus:ring-teal-500' : 'text-slate-500 hover:text-teal-500 focus:ring-teal-500'}`}
                                         onClick={(e) => { e.stopPropagation(); toggleCollection(product.id, product.name); }}
                                         aria-label={collectionStatus[product.id] ? "Remove from Collection" : "Add to Collection"}
                                     >
@@ -497,11 +399,11 @@ const HomePage = () => {
                                 </div>
                                 <div className="p-3.5 flex-grow flex flex-col justify-between">
                                     <div>
-                                        {product.group && ( <p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p> )}
+                                        {product.group && (<p className="text-xs font-medium text-indigo-500 mb-1 truncate tracking-wide">{product.group.name.toUpperCase()}</p>)}
                                         <h3 className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]" title={product.name}>
                                             {product.name}
                                         </h3>
-                                        {product.version && ( <p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p> )}
+                                        {product.version && (<p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>)}
                                     </div>
                                     <div className="mt-2.5">
                                         <div className="flex justify-between items-center">
@@ -543,15 +445,13 @@ const HomePage = () => {
                 <ProductDetailModal
                     product={selectedProductForModal}
                     onClose={handleCloseModal}
-                    onAddToCart={(productFromModal, event, quantityFromModal) => 
-                        handleAddToCart(productFromModal, event, quantityFromModal) 
+                    onAddToCart={(productFromModal, event, quantityFromModal) =>
+                        handleAddToCart(productFromModal, event, quantityFromModal)
                     }
-                    isAddingToCart={!!(cartAddingStatus && cartAddingStatus[selectedProductForModal.id])} 
-                    
+                    isAddingToCart={!!(cartAddingStatus && cartAddingStatus[selectedProductForModal.id])}
                     wishlistStatus={wishlistStatus[selectedProductForModal.id]}
                     onToggleWishlist={toggleWishlist}
-                    
-                    collectionStatus={collectionStatus[selectedProductForModal.id]} 
+                    collectionStatus={collectionStatus[selectedProductForModal.id]}
                     onToggleCollection={toggleCollection}
                 />
             )}
