@@ -7,14 +7,14 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTimesCircle,
-  FaShoppingCart, 
+  FaShoppingCart,
+  FaSpinner, 
 } from 'react-icons/fa';
-import axios from 'axios';
 import ProductDetailModal from '../components/ProductDetailModal';
-import { useCart } from '../contexts/CartContext'; 
+import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
+import { useAuth } from '../contexts/AuthContext'; 
 
-const API_BASE_URL = 'http://localhost:8080/api';
-const MOCK_USER_ID = 2;
 const ITEMS_PER_PAGE = 10;
 
 const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
@@ -39,14 +39,14 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
             e.stopPropagation();
             onRemove(product.id, product.name);
           }}
-          title="Remove from Wishlist" 
+          title="Remove from Wishlist"
           className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 z-10"
           aria-label="Remove from Wishlist"
         >
-          <FaTimesCircle className="w-3.5 h-3.5" /> 
+          <FaTimesCircle className="w-3.5 h-3.5" />
         </button>
       )}
-      
+
       <button
           className={`absolute bottom-2.5 left-2.5 bg-slate-400 text-white p-1.5 rounded-full shadow-md cursor-not-allowed z-10 opacity-50`}
           onClick={(e) => {e.stopPropagation(); alert("Thêm vào giỏ từ chi tiết sản phẩm.");}}
@@ -56,7 +56,7 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
       >
           <FaShoppingCart className="w-4 h-4" />
       </button>
-     
+
     </div>
     <div className="p-3.5 flex-grow flex flex-col justify-between">
       <div>
@@ -90,14 +90,24 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
 );
 
 const WishlistPage = () => {
-  const [wishlistedProducts, setWishlistedProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortOption, setSortOption] = useState('date_added_desc');
-  const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+  const {
+      wishlistItems,
+      loadingWishlist,
+      wishlistError,
+      removeProductFromWishlist,
+      addProductToWishlist, 
+      isProductInWishlist,
+      fetchWishlist
+  } = useWishlist();
 
-  const { addToCart: contextAddToCart, addingToCart: cartAddingStatus, cartItemCount } = useCart(); 
+  const { addToCart: contextAddToCart, addingToCart: cartAddingStatus } = useCart();
+  const { isLoggedIn, loadingAuth } = useAuth(); 
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortOption, setSortOption] = useState('date_added_desc'); 
+  const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+  const [sortedAndPaginatedItems, setSortedAndPaginatedItems] = useState([]);
+
 
   useEffect(() => {
     if (selectedProductForModal) {
@@ -110,40 +120,43 @@ const WishlistPage = () => {
     };
   }, [selectedProductForModal]);
 
-  const fetchWishlistedProducts = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist`,
-        { params: { sortBy: sortOption } }
-      );
-      setWishlistedProducts(response.data || []);
-    } catch (err) {
-      console.error("Error fetching wishlist:", err);
-      setError(err.response?.data?.message || err.message || 'Không thể tải danh sách yêu thích.');
-      setWishlistedProducts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sortOption]);
-
   useEffect(() => {
-    fetchWishlistedProducts();
-  }, [fetchWishlistedProducts]);
+    if (!loadingAuth && !loadingWishlist) {
+        let itemsToProcess = [...wishlistItems];
 
-  const handleRemoveFromWishlist = async (productId, productName) => {
-    try {
-      await axios.delete(
-        `${API_BASE_URL}/users/${MOCK_USER_ID}/wishlist/${productId}`
-      );
-      setWishlistedProducts((prev) => prev.filter((p) => p.id !== productId));
-      if (selectedProductForModal && selectedProductForModal.id === productId) {
-        handleCloseModal(); 
-      }
-    } catch (err) {
-      console.error("Error removing from wishlist:", err);
-      alert(`Lỗi khi xóa sản phẩm: ${err.response?.data?.message || err.message}`);
+        switch (sortOption) {
+            case 'date_added_desc':
+                break;
+            case 'date_added_asc':
+                itemsToProcess.reverse(); 
+                break;
+            case 'name_asc':
+                itemsToProcess.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                break;
+            case 'name_desc':
+                itemsToProcess.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
+                break;
+            case 'price_asc':
+                itemsToProcess.sort((a, b) => (parseFloat(a.price) || Infinity) - (parseFloat(b.price) || Infinity));
+                break;
+            case 'price_desc':
+                itemsToProcess.sort((a, b) => (parseFloat(b.price) || -Infinity) - (parseFloat(a.price) || -Infinity));
+                break;
+            default:
+                break;
+        }
+        setSortedAndPaginatedItems(itemsToProcess);
+        if (currentPage !== 1 && itemsToProcess.length > 0) { 
+        } else if (itemsToProcess.length === 0) {
+            setCurrentPage(1);
+        }
+    }
+  }, [wishlistItems, sortOption, loadingWishlist, loadingAuth, currentPage]);
+
+  const handleRemoveFromWishlistPage = async (productId, productName) => {
+    await removeProductFromWishlist(productId);
+    if (selectedProductForModal && selectedProductForModal.id === productId) {
+      handleCloseModal();
     }
   };
 
@@ -155,7 +168,12 @@ const WishlistPage = () => {
     setSelectedProductForModal(null);
   };
 
-  const handleAddToCartFromWishlistModal = async (product, event, quantity = 1) => {
+  const handleAddToCartFromWishlistModalAndPrompt = async (product, event, quantity = 1) => {
+    if (!isLoggedIn) {
+        alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng và quản lý wishlist trên tài khoản.");
+        return false;
+    }
+
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
 
@@ -175,41 +193,67 @@ const WishlistPage = () => {
     const success = await contextAddToCart(product, quantity);
     if (success) {
         setSelectedProductForModal(prev => prev ? {...prev, stockQuantity: Math.max(0, prev.stockQuantity - quantity)} : null);
-
-        if (window.confirm(`"${product.name}" đã được thêm vào giỏ. Bạn có muốn xóa khỏi Wishlist không?`)) {
-          handleRemoveFromWishlist(product.id, product.name);
+        if (isLoggedIn) {
+            if (window.confirm(`"${product.name}" đã được thêm vào giỏ. Bạn có muốn xóa khỏi Wishlist không?`)) {
+              await removeProductFromWishlist(product.id);
+            }
         }
     }
     return success;
   };
 
-  const totalItems = wishlistedProducts.length;
+  const totalItems = sortedAndPaginatedItems.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentDisplay = wishlistedProducts.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  const currentDisplay = sortedAndPaginatedItems.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
   const goToPage = (page) => {
-    if (page < 1 || page > totalPages) return;
+    if (page < 1 || page > totalPages) {
+        if (totalPages === 0 && page === 1) { 
+             setCurrentPage(1);
+             return;
+        }
+        if (page < 1 && totalPages > 0) {
+            setCurrentPage(1);
+            return;
+        }
+        if (page > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+            return;
+        }
+        return;
+    }
     setCurrentPage(page);
   };
 
-  if (isLoading) {
+
+  const handleToggleWishlistInModal = async (product) => {
+    const currentlyInWishlist = isProductInWishlist(product.id);
+    if (currentlyInWishlist) {
+        await removeProductFromWishlist(product.id);
+    } else {
+        await addProductToWishlist(product);
+    }
+  };
+
+
+  if (loadingAuth || loadingWishlist) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600 mb-3"></div>
-        <p className="text-gray-500">Đang tải danh sách yêu thích...</p>
+        <FaSpinner className="animate-spin text-pink-600 text-4xl mb-3" />
+        <p className="text-gray-500">Đang tải dữ liệu...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (wishlistError) {
     return (
       <div className="max-w-md mx-auto mt-10 p-6 bg-red-50 rounded-lg shadow text-center">
         <FaTimesCircle className="mx-auto text-4xl text-red-400 mb-3" />
         <h3 className="text-lg font-semibold text-gray-800 mb-2">Rất tiếc, đã xảy ra lỗi!</h3>
-        <p className="text-sm text-red-600 mb-4">{error}</p>
+        <p className="text-sm text-red-600 mb-4">{wishlistError}</p>
         <button
-          onClick={fetchWishlistedProducts}
+          onClick={fetchWishlist}
           className="px-4 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700 transition"
         >Thử lại</button>
       </div>
@@ -253,7 +297,7 @@ const WishlistPage = () => {
           </div>
         </div>
 
-        {totalItems === 0 && !isLoading ? (
+        {totalItems === 0 && !loadingWishlist ? (
           <div className="flex flex-col items-center justify-center p-10 bg-white rounded-lg shadow min-h-[300px]">
             <FaHeartBroken className="text-6xl text-gray-300 mb-6" />
             <p className="text-xl text-gray-600 mb-3">Danh sách yêu thích của bạn trống!</p>
@@ -274,7 +318,7 @@ const WishlistPage = () => {
                 <SimpleProductCard
                   key={product.id}
                   product={product}
-                  onRemove={handleRemoveFromWishlist}
+                  onRemove={handleRemoveFromWishlistPage}
                   onClickCard={handleOpenProductModal}
                 />
               ))}
@@ -321,12 +365,11 @@ const WishlistPage = () => {
           <ProductDetailModal
               product={selectedProductForModal}
               onClose={handleCloseModal}
-              onAddToCart={handleAddToCartFromWishlistModal}
+              onAddToCart={handleAddToCartFromWishlistModalAndPrompt}
               isAddingToCart={cartAddingStatus && cartAddingStatus[selectedProductForModal.id]}
-              wishlistStatus={true} 
-              onToggleWishlist={(productId, productName) => {
-                  handleRemoveFromWishlist(productId, productName);
-              }}
+              wishlistStatus={isProductInWishlist(selectedProductForModal.id)}
+              onToggleWishlist={() => handleToggleWishlistInModal(selectedProductForModal)}
+              isLoggedIn={isLoggedIn} 
           />
       )}
     </div>

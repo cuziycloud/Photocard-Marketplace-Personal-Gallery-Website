@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import ProductList from '../../pages/HomePage';
 import MyCollectionPage from '../../pages/MyCollectionPage';
 import WishlistPage from '../../pages/WishlistPage';
@@ -7,32 +7,12 @@ import GalleryPage from '../../pages/GalleryPage';
 import CartPage from '../../pages/CartPage';
 import StickyHeaderLayout from './StickyHeaderLayout';
 import AddProductPage from '../../pages/admin/AddProductPage';
+import LoginPage from '../../pages/LoginPage';
 
 const MainLayout = () => {
-  const location = useLocation();
-  const pathname = location.pathname.toLowerCase();
   const navbarHeight = '4rem'; 
 
-  const isAdminPage = pathname.startsWith('/admin/');
-
-  const pagesWithoutStickyHeaderPadding = [
-    '/wishlist',
-    '/card',
-    '/collection',
-    '/gallery',
-    '/bubble',
-    '/cart'
-  ];
-
   let stickyHeaderHeightContribution = '0rem';
-
-  if (!isAdminPage) {
-    if (pathname === '/') {
-      stickyHeaderHeightContribution = '1.5rem'; 
-    } else if (!pagesWithoutStickyHeaderPadding.includes(pathname)) {
-      stickyHeaderHeightContribution = '0.25rem'; 
-    }
-  }
 
   const paddingTop = `calc(${navbarHeight} + ${stickyHeaderHeightContribution})`;
 
@@ -44,6 +24,7 @@ const MainLayout = () => {
         <div>
           <Routes>
             <Route path="/" element={<ProductList />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/card" element={<MyCollectionPage />} />
             <Route path="/collection" element={<MyCollectionPage />} />
             <Route path="/gallery" element={<GalleryPage />} />

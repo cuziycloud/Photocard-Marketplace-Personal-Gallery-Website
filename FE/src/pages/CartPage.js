@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaTrash, FaSpinner, FaShoppingCart, FaPlus, FaMinus, FaExclamationCircle, FaMapMarkerAlt } from 'react-icons/fa';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const provinces = [
     { value: 'TP. Hồ Chí Minh', label: 'TP. Hồ Chí Minh', region: 'TPHCM' },
@@ -22,12 +23,13 @@ const CartPage = () => {
         cart,
         loadingCart,
         cartError,
-        fetchCart,
+        fetchCart, 
         updateItemQuantity,
         removeItemFromCart,
         updatingItem,
         removingItem
     } = useCart();
+    const { currentUser, isLoggedIn, loadingAuth } = useAuth();
     const navigate = useNavigate();
 
     const [selectedProvince, setSelectedProvince] = useState('');
@@ -36,18 +38,29 @@ const CartPage = () => {
     const [shippingTime, setShippingTime] = useState('');
 
     const handleQuantityChange = useCallback(async (item, change) => {
+        if (!isLoggedIn) {
+            alert("Vui lòng đăng nhập để thay đổi giỏ hàng.");
+            return;
+        }
         const newQuantity = item.quantity + change;
         if (newQuantity < 1) return;
-        if (newQuantity > item.stockQuantity) {
-            alert(`Số lượng "${item.productName}" yêu cầu (${newQuantity}) vượt quá tồn kho (${item.stockQuantity}).`);
+        
+        const currentStock = item.product?.stockQuantity !== undefined ? item.product.stockQuantity : item.stockQuantity;
+
+        if (newQuantity > currentStock) {
+            alert(`Số lượng "${item.productName || item.product?.name}" yêu cầu (${newQuantity}) vượt quá tồn kho (${currentStock}).`);
             return;
         }
         await updateItemQuantity(item.orderItemId, newQuantity);
-    }, [updateItemQuantity]);
+    }, [updateItemQuantity, isLoggedIn]);
 
     const handleRemoveItem = useCallback(async (orderItemId) => {
+        if (!isLoggedIn) {
+            alert("Vui lòng đăng nhập để thay đổi giỏ hàng.");
+            return;
+        }
         await removeItemFromCart(orderItemId);
-    }, [removeItemFromCart]);
+    }, [removeItemFromCart, isLoggedIn]);
 
     const calculateShipping = useCallback((provinceValue) => {
         if (!cart?.items || cart.items.length === 0) {
@@ -68,7 +81,7 @@ const CartPage = () => {
 
         switch (provinceData.region) {
             case 'TPHCM':
-                fee = 5.00; // USD
+                fee = 5.00; 
                 time = 'Dự kiến 3 ngày';
                 break;
             case 'MIEN_NAM_KHAC':
@@ -99,6 +112,11 @@ const CartPage = () => {
 
 
     const handleProceedToCheckout = () => {
+        if (!isLoggedIn || !currentUser) {
+            alert("Vui lòng đăng nhập để tiến hành thanh toán.");
+            navigate('/login');
+            return;
+        }
         if (!cart?.items || cart.items.length === 0) {
             alert("Giỏ hàng đang trống.");
             return;
@@ -117,42 +135,61 @@ const CartPage = () => {
         }
 
         const checkoutData = {
-            cartItems: cart.items,
+            orderId: cart.orderId,
+            userId: currentUser.id,
+            cartItems: cart.items.map(item => ({ 
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice
+            })),
             subTotal: totalAmount,
             shippingFee: calculatedShippingFee,
             totalPayable: finalTotalToDisplay,
-            shippingAddress: `${shippingAddress}, ${selectedProvince}`,
-            estimatedShippingTime: shippingTime,
+            shippingInfo: {
+                address: shippingAddress,
+                province: selectedProvince,
+                estimatedTime: shippingTime,
+            }
         };
         console.log("Proceeding to checkout with data (USD):", checkoutData);
-        alert("Chức năng thanh toán chưa được triển khai!");
+        alert("Chức năng thanh toán chưa được triển khai! Dữ liệu đã được log ra console.");
     };
 
-
-    if (loadingCart && !cart) {
+    if (loadingAuth || (loadingCart && !cart)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen py-24 bg-gray-50">
                 <FaSpinner className="animate-spin text-5xl text-indigo-500 mb-4" />
-                <p className="text-lg text-gray-600">Đang tải giỏ hàng...</p>
+                <p className="text-lg text-gray-600">Đang tải dữ liệu...</p>
             </div>
         );
     }
+    if (!loadingAuth && !isLoggedIn) {
+        return (
+             <div className="flex flex-col items-center justify-center min-h-screen text-center py-24 bg-gray-50">
+                <FaShoppingCart className="text-6xl text-gray-300 mb-4" />
+                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Giỏ hàng của bạn</h2>
+                <p className="text-gray-600 mb-6">Vui lòng <Link to="/login" className="text-indigo-600 hover:underline">đăng nhập</Link> để xem giỏ hàng.</p>
+            </div>
+        )
+    }
 
-    if (cartError) {
+
+    if (cartError && !loadingCart) { 
         return (
             <div className="flex flex-col items-center justify-center min-h-screen text-center px-4 bg-gray-50">
                 <FaExclamationCircle className="text-6xl text-red-400 mb-4" />
                 <h2 className="text-2xl font-bold text-red-600 mb-2">Đã xảy ra lỗi</h2>
                 <p className="text-gray-700 mb-4">{cartError}</p>
-                <button onClick={fetchCart} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Thử lại</button>
+                <button onClick={() => fetchCart()} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Thử lại</button>
             </div>
         );
     }
-
+    
     const items = cart?.items || [];
-    const totalQuantityFromContext = cart?.totalQuantity || 0;
+    const totalQuantityFromContext = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
     const totalAmount = parseFloat(cart?.totalAmount || 0);
     const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
+
 
     if (items.length === 0 && !loadingCart) {
         return (
@@ -182,8 +219,10 @@ const CartPage = () => {
                                         const isUpdating = updatingItem?.[item.orderItemId];
                                         const isRemoving = removingItem?.[item.orderItemId];
                                         const isProcessing = isUpdating || isRemoving;
-                                        const unitPriceUSD = parseFloat(item.unitPrice || 0);
+                                        const unitPriceUSD = parseFloat(item.unitPrice || item.product?.price || 0); 
                                         const itemTotalUSD = unitPriceUSD * item.quantity;
+                                        const stockQuantity = item.product?.stockQuantity !== undefined ? item.product.stockQuantity : (item.stockQuantity || 0);
+
 
                                         return (
                                             <div key={item.orderItemId} className={`relative bg-white rounded-xl shadow p-4 flex flex-col sm:flex-row gap-4 transition-opacity ${isRemoving ? 'opacity-40' : ''}`}>
@@ -194,19 +233,19 @@ const CartPage = () => {
                                                 )}
                                                 <Link to={`/products/${item.productId}`} className="relative w-full sm:w-32 h-auto sm:h-40 block flex-shrink-0 bg-gray-100 p-2 box-border flex justify-center items-center overflow-hidden rounded-md">
                                                     <img
-                                                        src={item.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                        alt={item.productName}
+                                                        src={item.imageUrl || item.product?.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                        alt={item.productName || item.product?.name}
                                                         className="block max-w-full max-h-full object-contain rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
                                                     />
                                                 </Link>
                                                 <div className="flex-grow flex flex-col justify-between w-full">
                                                     <div>
                                                         <Link to={`/products/${item.productId}`} className="text-lg font-semibold text-slate-800 hover:text-indigo-600 line-clamp-2">
-                                                            {item.productName}
+                                                            {item.productName || item.product?.name}
                                                         </Link>
                                                         <p className="text-sm text-slate-500 mt-1">Đơn giá: ${unitPriceUSD.toFixed(2)}</p>
                                                     </div>
-                                                    <p className="text-xs text-slate-400 mt-1 sm:hidden">Tồn kho: {item.stockQuantity}</p>
+                                                    <p className="text-xs text-slate-400 mt-1 sm:hidden">Tồn kho: {stockQuantity}</p>
                                                 </div>
                                                 <div className="flex flex-col items-start sm:items-end justify-between sm:min-w-[170px] w-full sm:w-auto pt-2 sm:pt-0">
                                                     <p className="text-md font-bold text-slate-800 mb-2 sm:mb-0">${itemTotalUSD.toFixed(2)}</p>
@@ -219,7 +258,7 @@ const CartPage = () => {
                                                             > <FaMinus size="0.75em" /> </button>
                                                             <span className="px-3 py-1.5 text-sm w-10 text-center bg-white border-l border-r">{item.quantity}</span>
                                                             <button
-                                                                disabled={item.quantity >= item.stockQuantity || isProcessing}
+                                                                disabled={item.quantity >= stockQuantity || isProcessing}
                                                                 onClick={() => handleQuantityChange(item, 1)}
                                                                 className="px-3 py-1.5 text-slate-600 hover:bg-gray-100 disabled:opacity-40 rounded-r-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                                             > <FaPlus size="0.75em" /> </button>
@@ -230,13 +269,13 @@ const CartPage = () => {
                                                             )}
                                                         </div>
                                                         <button
-                                                            onClick={() => handleRemoveItem(item.orderItemId, item.productName)}
+                                                            onClick={() => handleRemoveItem(item.orderItemId)}
                                                             disabled={isProcessing}
                                                             className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full focus:outline-none focus:ring-1 focus:ring-red-500"
                                                             title="Xóa sản phẩm"
                                                         > <FaTrash /> </button>
                                                     </div>
-                                                    <p className="text-xs text-slate-400 mt-1 hidden sm:block">Tồn kho: {item.stockQuantity}</p>
+                                                    <p className="text-xs text-slate-400 mt-1 hidden sm:block">Tồn kho: {stockQuantity}</p>
                                                 </div>
                                             </div>
                                         );
@@ -314,7 +353,7 @@ const CartPage = () => {
                                 </div>
                                 <button
                                     onClick={handleProceedToCheckout}
-                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim()}
+                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince)}
                                     className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition-all text-center font-semibold text-base disabled:opacity-50"
                                 >
                                     Tiến hành thanh toán

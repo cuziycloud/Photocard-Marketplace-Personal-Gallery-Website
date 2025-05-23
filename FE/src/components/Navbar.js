@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { FaMusic, FaBars, FaTimes, FaShoppingCart, FaSearch } from 'react-icons/fa';
+import { FaBars, FaTimes, FaShoppingCart } from 'react-icons/fa'; 
 import { useCart } from '../contexts/CartContext';
-import UserMenu from './UserMenu';
-
+import { useAuth } from '../contexts/AuthContext'; 
+import UserMenu from './UserMenu'; 
 
 const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const { cartItemCount, loadingCart } = useCart();
+    const { isLoggedIn, loadingAuth } = useAuth(); 
 
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => { 
@@ -31,6 +32,12 @@ const Navbar = () => {
                 ? (isScrolled || isMobileMenuOpen ? 'text-white bg-indigo-700' : 'text-indigo-600 underline underline-offset-4 decoration-2 decoration-indigo-600')
                 : (isScrolled || isMobileMenuOpen ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:text-indigo-600')
         }`;
+    
+    const desktopLoginButtonClasses = `px-4 py-2 rounded-md text-base font-medium transition-colors duration-300 ${
+        isScrolled || isMobileMenuOpen 
+        ? 'text-gray-300 hover:bg-gray-700 hover:text-white' 
+        : 'text-gray-700 hover:text-indigo-600'
+    }`;
 
     const mobileNavLinkClasses = ({ isActive }) =>
         `block px-3 py-2 rounded-md text-base font-medium transition-colors duration-300 ${
@@ -38,12 +45,19 @@ const Navbar = () => {
                 ? 'bg-indigo-600 text-white'
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
         }`;
+    
+    const mobileLoginButtonClasses = `block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`;
+
 
     const actionButtonClasses = `p-3 rounded-full transition-colors ${
         isScrolled || isMobileMenuOpen
             ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
             : 'text-gray-600 hover:bg-gray-200 hover:text-indigo-600'
     }`;
+
+    if (loadingAuth) {
+        return null; 
+    }
 
     return (
         <nav
@@ -61,8 +75,8 @@ const Navbar = () => {
                             className={`flex items-center group ${isScrolled || isMobileMenuOpen ? 'text-white' : 'text-gray-900'} hover:text-green-500 transition-colors`}
                         >
                             <img
-                            src="/assets/img/bite.png"
-                            alt="Logo"
+                            src="/assets/img/bite.png" 
+                            alt="Logo K-Clz"
                             className="h-10 w-10 mr-2 object-contain transition-transform duration-300 group-hover:scale-110"
                             />
                             <span className="font-bold text-2xl tracking-wide">K-Clz</span>
@@ -84,9 +98,11 @@ const Navbar = () => {
                             <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Wishlist
                             </NavLink>
-                            <NavLink to="/myorder" className={navLinkClasses} onClick={closeMobileMenu}>
-                                My Order
-                            </NavLink>
+                            {isLoggedIn && ( 
+                                <NavLink to="/myorder" className={navLinkClasses} onClick={closeMobileMenu}>
+                                    My Order
+                                </NavLink>
+                            )}
                         </div>
                     </div>
 
@@ -101,12 +117,26 @@ const Navbar = () => {
                             )}
                         </Link>
                         
-                        <UserMenu isDark={isScrolled || isMobileMenuOpen} />
+                        {isLoggedIn ? (
+                            <UserMenu isDark={isScrolled || isMobileMenuOpen} />
+                        ) : (
+                            <Link to="/login" className={desktopLoginButtonClasses} onClick={closeMobileMenu}>
+                                Login
+                            </Link>
+                        )}
                     </div>
 
 
                     {/* Mobile Menu Button */}
                     <div className="md:hidden flex items-center">
+                         <Link to="/cart" aria-label="Cart" className={`${actionButtonClasses} relative mr-2`}>
+                            <FaShoppingCart className="h-6 w-6" />
+                            {!loadingCart && cartItemCount > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                                    {cartItemCount}
+                                </span>
+                            )}
+                        </Link>
                         <button
                             onClick={toggleMobileMenu}
                             type="button"
@@ -132,31 +162,30 @@ const Navbar = () => {
                         <NavLink to="/" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
                             Home
                         </NavLink>
-                        <NavLink to="/products" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
-                            Shop
+                        <NavLink to="/gallery" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Gallery
                         </NavLink>
                         <NavLink to="/collection" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
-                            Collections
+                           Collection
                         </NavLink>
-                        <NavLink to="/contact" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
-                            Contact
+                        <NavLink to="/wishlist" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                            Wishlist
                         </NavLink>
+                        {isLoggedIn && (
+                            <NavLink to="/myorder" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                                My Order
+                            </NavLink>
+                        )}
                     </div>
-                    {/* Mobile Actions */}
                     <div className="pt-4 pb-3 border-t border-gray-700">
-                        <div className="flex items-center justify-center space-x-4 px-5">
-                            <button aria-label="Search" className="p-2 rounded-full text-gray-300 hover:bg-gray-700 hover:text-white">
-                                <FaSearch className="h-6 w-6" />
-                            </button>
-                            <Link
-                                to="/cart"
-                                aria-label="Cart"
-                                className="p-2 rounded-full text-gray-300 hover:bg-gray-700 hover:text-white relative"
-                                onClick={closeMobileMenu}
-                            >
-                                <FaShoppingCart className="h-6 w-6" />
-                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">3</span>
-                            </Link>
+                        <div className="px-2 space-y-1">
+                            {isLoggedIn ? (
+                                <UserMenu isDark={true} mobileContext={true} closeMobileMenu={closeMobileMenu}/> 
+                            ) : (
+                                <Link to="/login" className={mobileLoginButtonClasses} onClick={closeMobileMenu}>
+                                    Login
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

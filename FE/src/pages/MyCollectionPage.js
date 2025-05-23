@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom'; 
 import {
   FaPlusCircle,
   FaFilter,
@@ -7,42 +7,49 @@ import {
   FaTimesCircle,
   FaChevronLeft,
   FaChevronRight,
-  FaTrashAlt,
-  FaCheckCircle
+  FaCheckCircle,
+  FaLock,
+  FaSpinner, 
 } from 'react-icons/fa';
 import axios from 'axios';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext'; 
+import { useWishlist } from '../contexts/WishlistContext'; 
 
 const API_BASE_URL = 'http://localhost:8080/api';
-const MOCK_USER_ID = 2;
 const ITEMS_PER_PAGE = 10;
 
-const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
+const SimpleProductCard = ({ product, onRemove, onClickCard, isRemoving }) => ( 
   <div
-    className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative"
-    onClick={() => onClickCard(product)}
-    style={{ cursor: 'pointer' }}
+    className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 relative ${isRemoving ? 'opacity-50 pointer-events-none' : ''}`}
+    onClick={!isRemoving ? () => onClickCard(product) : undefined}
+    style={{ cursor: !isRemoving ? 'pointer' : 'default' }}
   >
+    {isRemoving && (
+        <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-20 rounded-xl">
+            <FaSpinner className="animate-spin text-teal-500 text-3xl" />
+        </div>
+    )}
     <div className="relative">
-      <div style={{ paddingTop: '135%' }} /> 
+      <div style={{ paddingTop: '135%' }} />
       <div className="absolute inset-0 bg-[#e5e7eb] p-[20px] sm:p-[30px] md:p-[40px] box-border flex justify-center items-center overflow-hidden border-b border-[#ddd]">
         <img
           src={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
           alt={product.name}
-          className="block max-w-full max-h-full object-contain rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105" // object-contain để thấy rõ card
+          className="block max-w-full max-h-full object-contain rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
         />
       </div>
     </div>
 
-    <div className="p-3 flex-grow flex flex-col"> 
+    <div className="p-3 flex-grow flex flex-col">
       {product.group?.name && (
         <p className="text-[0.65rem] text-slate-400 mb-0.5 truncate tracking-wide">
           {product.group.name.toUpperCase()}
         </p>
       )}
       <h3
-        className="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-tight line-clamp-2 min-h-[2.5em]" // Điều chỉnh min-h và leading
+        className="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors duration-300 leading-tight line-clamp-2 min-h-[2.5em]"
         title={product.name}
       >
         {product.name}
@@ -51,7 +58,7 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
           <p className="text-[0.7rem] text-slate-500 mt-0.5 mb-1">Ver: {product.version}</p>
         )}
 
-      <p className="text-base font-bold text-pink-600 mt-1 mb-2"> 
+      <p className="text-base font-bold text-pink-600 mt-1 mb-2">
         ${typeof product.price === 'number' ? product.price.toFixed(2) : 'N/A'}
       </p>
 
@@ -60,10 +67,14 @@ const SimpleProductCard = ({ product, onRemove, onClickCard }) => (
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onRemove(product.id, product.name);
+            if (!isRemoving) { 
+                onRemove(product.id, product.name);
+            }
           }}
           title="Xóa khỏi Bộ sưu tập"
-          className="mt-auto w-full text-xs sm:text-sm py-2 px-3 rounded-md border border-teal-400 bg-teal-50 text-teal-600 flex items-center justify-center gap-1.5">
+          disabled={isRemoving}
+          className="mt-auto w-full text-xs sm:text-sm py-2 px-3 rounded-md border border-teal-400 bg-teal-50 text-teal-600 flex items-center justify-center gap-1.5 hover:bg-teal-100 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
             <FaCheckCircle className="w-3.5 h-3.5" />
             <span>Collected</span>
         </button>
@@ -80,8 +91,17 @@ const MyCollectionPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('date_added_desc');
   const [selectedProductForModal, setSelectedProductForModal] = useState(null);
+  const [removingProductId, setRemovingProductId] = useState(null); 
 
   const { addToCart: contextAddToCart, addingToCart: cartAddingStatus } = useCart();
+  const { currentUser, isLoggedIn, loadingAuth } = useAuth();
+  const {
+    isProductInWishlist,
+    addProductToWishlist,
+    removeProductFromWishlist: removeFromWishlistContext,
+    togglingWishlist
+  } = useWishlist();
+
 
   useEffect(() => {
     if (selectedProductForModal) {
@@ -96,31 +116,47 @@ const MyCollectionPage = () => {
 
 
   const fetchCollectedProducts = useCallback(async () => {
+    if (!isLoggedIn || !currentUser) {
+        setIsLoading(false);
+        setMyCollectedProducts([]);
+        return;
+    }
     setIsLoading(true);
     setError(null);
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/users/${MOCK_USER_ID}/collections`,
+        `${API_BASE_URL}/users/${currentUser.id}/collections`, 
         { params: { sortBy: sortOption } }
       );
       setMyCollectedProducts(response.data || []);
     } catch (err) {
       console.error("Error fetching collection:", err);
-      setError(err.response?.data?.message || err.message || 'Không thể tải bộ sưu tập.');
+      if (err.response && err.response.status === 403) {
+          setError("Bạn không có quyền truy cập vào tài nguyên này. Vui lòng đăng nhập lại.");
+      } else {
+          setError(err.response?.data?.message || err.message || 'Không thể tải bộ sưu tập.');
+      }
       setMyCollectedProducts([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sortOption]);
+  }, [sortOption, isLoggedIn, currentUser]);
 
   useEffect(() => {
+    if (loadingAuth) return;
     fetchCollectedProducts();
-  }, [fetchCollectedProducts]);
+  }, [fetchCollectedProducts, loadingAuth]);
 
   const handleRemoveFromCollection = async (id, name) => {
+    if (!isLoggedIn || !currentUser) {
+        alert("Vui lòng đăng nhập để thực hiện thao tác này.");
+        return;
+    }
     if (!window.confirm(`Bạn có chắc muốn xóa "${name}" khỏi bộ sưu tập không?`)) return;
+
+    setRemovingProductId(id); 
     try {
-      await axios.delete(`${API_BASE_URL}/users/${MOCK_USER_ID}/collections/${id}`);
+      await axios.delete(`${API_BASE_URL}/users/${currentUser.id}/collections/${id}`); 
       setMyCollectedProducts(prev => prev.filter(p => p.id !== id));
       if (selectedProductForModal && selectedProductForModal.id === id) {
         handleCloseModal();
@@ -128,11 +164,13 @@ const MyCollectionPage = () => {
     } catch (err) {
       console.error("Error removing from collection:", err);
       alert(`Lỗi khi xóa: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setRemovingProductId(null); 
     }
   };
 
   const handleOpenProductModal = (product) => {
-         setSelectedProductForModal(product);
+    setSelectedProductForModal(product);
   };
 
   const handleCloseModal = () => {
@@ -140,6 +178,10 @@ const MyCollectionPage = () => {
   };
 
   const handleAddToCartFromCollectionModal = async (product, event, quantity = 1) => {
+    if (!isLoggedIn) {
+        alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+        return false;
+    }
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
 
@@ -159,8 +201,21 @@ const MyCollectionPage = () => {
     const success = await contextAddToCart(product, quantity);
     if (success) {
         setSelectedProductForModal(prev => prev ? {...prev, stockQuantity: Math.max(0, prev.stockQuantity - quantity)} : null);
+        setMyCollectedProducts(prevProds => prevProds.map(p =>
+            p.id === product.id ? { ...p, stockQuantity: Math.max(0, p.stockQuantity - quantity) } : p
+        ));
     }
     return success;
+  };
+
+  const handleToggleWishlistInModal = async (product) => {
+    if (!product) return;
+    const currentlyInWishlist = isProductInWishlist(product.id);
+    if (currentlyInWishlist) {
+        await removeFromWishlistContext(product.id);
+    } else {
+        await addProductToWishlist(product);
+    }
   };
 
 
@@ -170,16 +225,48 @@ const MyCollectionPage = () => {
   const currentDisplay = myCollectedProducts.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
   const goToPage = page => {
-    if (page < 1 || page > totalPages) return;
+    if (page < 1 || page > totalPages) {
+        if (totalPages === 0 && page === 1) {
+             setCurrentPage(1);
+             return;
+        }
+        if (page < 1 && totalPages > 0) {
+            setCurrentPage(1);
+            return;
+        }
+        if (page > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+            return;
+        }
+        return;
+    }
     setCurrentPage(page);
   };
 
-  if (isLoading) return (
+
+  if (loadingAuth || isLoading) return (
     <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-500"></div>
+      <FaSpinner className="animate-spin text-pink-500 text-4xl" />
       <p className="ml-3 text-gray-600">Đang tải bộ sưu tập...</p>
     </div>
   );
+
+  if (!loadingAuth && !isLoggedIn) {
+    return (
+        <div className="min-h-screen bg-gray-100 py-8 px-4 flex items-center justify-center">
+            <div className="text-center p-10 bg-white rounded-lg shadow-xl max-w-md">
+                <FaLock className="mx-auto text-5xl text-sky-400 mb-6" />
+                <h2 className="text-2xl font-semibold text-slate-800 mb-3">
+                    Bộ sưu tập riêng tư
+                </h2>
+                <p className="text-gray-600 mb-8">
+                    Vui lòng <Link to="/login" className="text-sky-600 hover:underline font-medium">đăng nhập</Link> để xem và quản lý bộ sưu tập của bạn.
+                </p>
+            </div>
+        </div>
+    );
+  }
+
 
   if (error) return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-red-50 rounded-lg shadow text-center">
@@ -187,7 +274,11 @@ const MyCollectionPage = () => {
       <h3 className="text-lg font-semibold text-gray-800 mb-2">Rất tiếc, đã xảy ra lỗi!</h3>
       <p className="text-sm text-red-600 mb-4">{error}</p>
       <button
-        onClick={fetchCollectedProducts}
+        onClick={() => {
+            if (isLoggedIn && currentUser) { 
+                 fetchCollectedProducts();
+            }
+        }}
         className="px-4 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700 transition-colors"
       >
         Thử lại
@@ -233,7 +324,7 @@ const MyCollectionPage = () => {
           </div>
         </div>
 
-        {totalItems === 0 && !isLoading ? (
+        {totalItems === 0 && !isLoading && !error ? (
           <div className="flex flex-col items-center justify-center p-10 bg-white rounded-lg shadow min-h-[300px]">
             <FaPlusCircle className="text-6xl text-gray-300 mb-6" />
             <p className="text-xl text-gray-600 mb-3">Bộ sưu tập của bạn trống trơn!</p>
@@ -256,6 +347,7 @@ const MyCollectionPage = () => {
                   product={product}
                   onRemove={handleRemoveFromCollection}
                   onClickCard={handleOpenProductModal}
+                  isRemoving={removingProductId === product.id} 
                 />
               ))}
             </div>
@@ -303,12 +395,16 @@ const MyCollectionPage = () => {
               onClose={handleCloseModal}
               onAddToCart={handleAddToCartFromCollectionModal}
               isAddingToCart={cartAddingStatus && cartAddingStatus[selectedProductForModal.id]}
-              wishlistStatus={false}
-              onToggleWishlist={() => alert("Chức năng Wishlist không áp dụng cho sản phẩm này.")}
-              collectionStatus={true}
+              wishlistStatus={isProductInWishlist(selectedProductForModal.id)}
+              onToggleWishlist={() => handleToggleWishlistInModal(selectedProductForModal)}
+              collectionStatus={true} 
               onToggleCollection={(productId, productName) => {
                   handleRemoveFromCollection(productId, productName);
+                  if (selectedProductForModal && selectedProductForModal.id === productId) {
+                      handleCloseModal();
+                  }
               }}
+              isLoggedIn={isLoggedIn}
           />
       )}
     </div>
