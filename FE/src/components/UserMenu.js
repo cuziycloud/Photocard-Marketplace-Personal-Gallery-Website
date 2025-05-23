@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaSignOutAlt, FaCog } from 'react-icons/fa'; 
+import { FaUserCircle, FaSignOutAlt, FaCog } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 
 const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} }) => {
@@ -10,7 +10,7 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
     const dropdownRef = useRef(null);
 
     const toggleDropdown = (e) => {
-        e.stopPropagation(); 
+        e.stopPropagation();
         setIsOpen(!isOpen);
     };
 
@@ -20,8 +20,8 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
             closeMobileMenu();
         }
         try {
-            await logout(); 
-            navigate('/'); 
+            await logout();
+            navigate('/');
         } catch (error) {
             console.error("Failed to logout:", error);
         }
@@ -32,11 +32,9 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
         if (mobileContext && typeof closeMobileMenu === 'function') {
             closeMobileMenu();
         }
-        if (action) {
-            action();
-        }
+        if (action) action();
     };
-    
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -49,60 +47,74 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
         };
     }, []);
 
+    const iconColorClass = isDark ? 'text-gray-200 hover:text-white' : 'text-gray-600 hover:text-indigo-600';
+    const dropdownBgClass = isDark ? 'bg-gray-900' : 'bg-white';
+    const dropdownTextClass = isDark
+        ? 'text-gray-200 hover:bg-gray-800 hover:text-white'
+        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600';
+    const dropdownBorderClass = isDark ? 'border-gray-700' : 'border-gray-200';
+    const textColorPrimary = isDark ? 'text-white' : 'text-gray-900';
+    const textColorSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
 
-    const iconColorClass = isDark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-indigo-600';
-    const dropdownBgClass = isDark ? 'bg-gray-700' : 'bg-white';
-    const dropdownTextClass = isDark ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100';
-    const dropdownBorderClass = isDark ? 'border-gray-600' : 'border-gray-200';
-
-    if (!currentUser) {
-        return null;
-    }
+    if (!currentUser) return null;
 
     return (
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={toggleDropdown}
-                className={`p-2 rounded-full focus:outline-none focus:ring-2 ${isDark ? 'focus:ring-white' : 'focus:ring-indigo-500'} ${iconColorClass} flex items-center`}
+                className={`flex items-center p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDark ? 'focus:ring-white focus:ring-offset-gray-900' : 'focus:ring-indigo-500 focus:ring-offset-white'
+                } ${iconColorClass} transition duration-200 ease-in-out hover:scale-105`}
                 aria-label="User menu"
                 aria-haspopup="true"
                 aria-expanded={isOpen}
             >
-                <FaUserCircle className="h-6 w-6" />
-                {mobileContext && <span className="ml-2 text-sm">{currentUser.username || 'Account'}</span>}
+                <FaUserCircle className="h-8 w-8" />
+                {mobileContext && (
+                    <span className="ml-3 text-base font-medium truncate max-w-[120px] ${textColorPrimary}">
+                        {currentUser.username || 'Account'}
+                    </span>
+                )}
             </button>
 
             {isOpen && (
-                <div 
-                    className={`absolute ${mobileContext ? 'left-0' : 'right-0'} mt-2 w-48 rounded-md shadow-xl ${dropdownBgClass} ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
+                <div
+                    className={`absolute ${
+                        mobileContext ? 'left-0' : 'right-0'
+                    } mt-3 w-60 rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 ${dropdownBgClass} z-50 transform transition-all duration-300 ease-in-out ${
+                        isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                    }`}
                     role="menu"
                     aria-orientation="vertical"
-                    aria-labelledby="user-menu-button"
                 >
-                    <div className="py-1" role="none">
-                        <div className={`px-4 py-3 ${mobileContext ? '' : `border-b ${dropdownBorderClass}`}`}>
-                            <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`} role="none">
-                                Signed in as
-                            </p>
-                            <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`} role="none">
+                    <div className="py-3">
+                        <div className={`px-5 py-4 border-b ${dropdownBorderClass}`}>
+                            <div className="flex items-center gap-x-2">
+                                <p className={`text-sm font-medium ${textColorSecondary}`}>
+                                Signed in as:
+                                </p>
+                                <p className={`text-sm font-semibold truncate ${textColorPrimary}`}>
                                 {currentUser.username || currentUser.email}
-                            </p>
+                                </p>
+                            </div>
                         </div>
+
                         <Link
                             to="/profile"
-                            className={`block px-4 py-2 text-sm ${dropdownTextClass}`}
-                            role="menuitem"
                             onClick={() => handleMenuClick(() => navigate('/profile'))}
+                            className={`flex items-center px-5 py-3 text-sm font-medium w-full ${dropdownTextClass} transition duration-150 ease-in-out rounded-md mx-2 mt-2`}
+                            role="menuitem"
                         >
-                            <FaCog className="inline mr-2 h-4 w-4" />
+                            <FaCog className="mr-3 h-5 w-5" />
                             Profile
                         </Link>
+
                         <button
                             onClick={handleLogout}
-                            className={`block w-full text-left px-4 py-2 text-sm ${dropdownTextClass}`}
+                            className={`flex items-center px-5 py-3 text-sm font-medium w-full ${dropdownTextClass} transition duration-150 ease-in-out rounded-md mx-2 mb-2`}
                             role="menuitem"
                         >
-                             <FaSignOutAlt className="inline mr-2 h-4 w-4" />
+                            <FaSignOutAlt className="mr-3 h-5 w-5" />
                             Sign out
                         </button>
                     </div>

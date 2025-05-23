@@ -23,7 +23,7 @@ const CartPage = () => {
         cart,
         loadingCart,
         cartError,
-        fetchCart, 
+        fetchCart,
         updateItemQuantity,
         removeItemFromCart,
         updatingItem,
@@ -37,29 +37,30 @@ const CartPage = () => {
     const [calculatedShippingFee, setCalculatedShippingFee] = useState(0);
     const [shippingTime, setShippingTime] = useState('');
 
-    const handleQuantityChange = useCallback(async (item, change) => {
-        if (!isLoggedIn) {
-            alert("Vui lòng đăng nhập để thay đổi giỏ hàng.");
-            return;
+    useEffect(() => {
+        if (!loadingAuth) { 
+            fetchCart();
         }
+    }, [isLoggedIn, loadingAuth, fetchCart]);
+
+
+    const handleQuantityChange = useCallback(async (item, change) => {
         const newQuantity = item.quantity + change;
         if (newQuantity < 1) return;
-        
-        const currentStock = item.product?.stockQuantity !== undefined ? item.product.stockQuantity : item.stockQuantity;
+
+        const currentStock = item.stockQuantity; 
 
         if (newQuantity > currentStock) {
-            alert(`Số lượng "${item.productName || item.product?.name}" yêu cầu (${newQuantity}) vượt quá tồn kho (${currentStock}).`);
+            alert(`Số lượng "${item.productName}" yêu cầu (${newQuantity}) vượt quá tồn kho (${currentStock}).`);
             return;
         }
-        await updateItemQuantity(item.orderItemId, newQuantity);
+        const identifier = isLoggedIn && item.orderItemId ? item.orderItemId : item.productId;
+        await updateItemQuantity(identifier, newQuantity);
     }, [updateItemQuantity, isLoggedIn]);
 
-    const handleRemoveItem = useCallback(async (orderItemId) => {
-        if (!isLoggedIn) {
-            alert("Vui lòng đăng nhập để thay đổi giỏ hàng.");
-            return;
-        }
-        await removeItemFromCart(orderItemId);
+    const handleRemoveItem = useCallback(async (item) => {
+        const identifier = isLoggedIn && item.orderItemId ? item.orderItemId : item.productId;
+        await removeItemFromCart(identifier);
     }, [removeItemFromCart, isLoggedIn]);
 
     const calculateShipping = useCallback((provinceValue) => {
@@ -68,33 +69,19 @@ const CartPage = () => {
             setShippingTime('');
             return { fee: 0, time: '' };
         }
-
         const provinceData = provinces.find(p => p.value === provinceValue);
         if (!provinceData) {
             setCalculatedShippingFee(0);
             setShippingTime('Vui lòng chọn tỉnh/thành');
             return { fee: 0, time: 'Vui lòng chọn tỉnh/thành' };
         }
-
         let fee = 0;
         let time = '';
-
         switch (provinceData.region) {
-            case 'TPHCM':
-                fee = 5.00; 
-                time = 'Dự kiến 3 ngày';
-                break;
-            case 'MIEN_NAM_KHAC':
-                fee = 7.00;
-                time = 'Dự kiến 5 ngày';
-                break;
-            case 'KHAC':
-                fee = 10.00;
-                time = 'Dự kiến 7 ngày';
-                break;
-            default:
-                fee = 0;
-                time = 'Không hỗ trợ vận chuyển';
+            case 'TPHCM': fee = 5.00; time = 'Dự kiến 3 ngày'; break;
+            case 'MIEN_NAM_KHAC': fee = 7.00; time = 'Dự kiến 5 ngày'; break;
+            case 'KHAC': fee = 10.00; time = 'Dự kiến 7 ngày'; break;
+            default: fee = 0; time = 'Không hỗ trợ vận chuyển';
         }
         setCalculatedShippingFee(fee);
         setShippingTime(time);
@@ -114,7 +101,7 @@ const CartPage = () => {
     const handleProceedToCheckout = () => {
         if (!isLoggedIn || !currentUser) {
             alert("Vui lòng đăng nhập để tiến hành thanh toán.");
-            navigate('/login');
+            navigate('/login', { state: { from: '/cart' } }); 
             return;
         }
         if (!cart?.items || cart.items.length === 0) {
@@ -137,7 +124,7 @@ const CartPage = () => {
         const checkoutData = {
             orderId: cart.orderId,
             userId: currentUser.id,
-            cartItems: cart.items.map(item => ({ 
+            cartItems: cart.items.map(item => ({
                 productId: item.productId,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
@@ -155,26 +142,16 @@ const CartPage = () => {
         alert("Chức năng thanh toán chưa được triển khai! Dữ liệu đã được log ra console.");
     };
 
-    if (loadingAuth || (loadingCart && !cart)) {
+    if (loadingAuth || (loadingCart && cart.items.length === 0 && !cartError)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen py-24 bg-gray-50">
                 <FaSpinner className="animate-spin text-5xl text-indigo-500 mb-4" />
-                <p className="text-lg text-gray-600">Đang tải dữ liệu...</p>
+                <p className="text-lg text-gray-600">Đang tải dữ liệu giỏ hàng...</p>
             </div>
         );
     }
-    if (!loadingAuth && !isLoggedIn) {
-        return (
-             <div className="flex flex-col items-center justify-center min-h-screen text-center py-24 bg-gray-50">
-                <FaShoppingCart className="text-6xl text-gray-300 mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Giỏ hàng của bạn</h2>
-                <p className="text-gray-600 mb-6">Vui lòng <Link to="/login" className="text-indigo-600 hover:underline">đăng nhập</Link> để xem giỏ hàng.</p>
-            </div>
-        )
-    }
 
-
-    if (cartError && !loadingCart) { 
+    if (cartError && !loadingCart) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen text-center px-4 bg-gray-50">
                 <FaExclamationCircle className="text-6xl text-red-400 mb-4" />
@@ -184,12 +161,11 @@ const CartPage = () => {
             </div>
         );
     }
-    
-    const items = cart?.items || [];
-    const totalQuantityFromContext = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-    const totalAmount = parseFloat(cart?.totalAmount || 0);
-    const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
 
+    const items = cart?.items || [];
+    const totalQuantityFromContext = cart?.totalQuantity || 0;
+    const totalAmount = cart?.totalAmount || 0;
+    const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
 
     if (items.length === 0 && !loadingCart) {
         return (
@@ -204,7 +180,7 @@ const CartPage = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto"> 
+            <div className="max-w-7xl mx-auto">
                 <div className="mb-10 text-center">
                     <h1 className="text-4xl font-extrabold text-slate-900">Giỏ hàng & Thanh toán</h1>
                 </div>
@@ -216,16 +192,16 @@ const CartPage = () => {
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-6">Chi tiết giỏ hàng ({totalQuantityFromContext} sản phẩm)</h2>
                                 <div className="space-y-5">
                                     {items.map(item => {
-                                        const isUpdating = updatingItem?.[item.orderItemId];
-                                        const isRemoving = removingItem?.[item.orderItemId];
+                                        const itemIdentifier = isLoggedIn && item.orderItemId ? item.orderItemId : item.productId;
+                                        const isUpdating = updatingItem?.[itemIdentifier];
+                                        const isRemoving = removingItem?.[itemIdentifier];
                                         const isProcessing = isUpdating || isRemoving;
-                                        const unitPriceUSD = parseFloat(item.unitPrice || item.product?.price || 0); 
+                                        const unitPriceUSD = parseFloat(item.unitPrice || 0);
                                         const itemTotalUSD = unitPriceUSD * item.quantity;
-                                        const stockQuantity = item.product?.stockQuantity !== undefined ? item.product.stockQuantity : (item.stockQuantity || 0);
-
+                                        const stockQuantity = item.stockQuantity || 0;
 
                                         return (
-                                            <div key={item.orderItemId} className={`relative bg-white rounded-xl shadow p-4 flex flex-col sm:flex-row gap-4 transition-opacity ${isRemoving ? 'opacity-40' : ''}`}>
+                                            <div key={itemIdentifier} className={`relative bg-white rounded-xl shadow p-4 flex flex-col sm:flex-row gap-4 transition-opacity ${isRemoving ? 'opacity-40' : ''}`}>
                                                 {isRemoving && (
                                                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 rounded-xl">
                                                         <FaSpinner className="animate-spin text-red-500 text-2xl" />
@@ -233,15 +209,15 @@ const CartPage = () => {
                                                 )}
                                                 <Link to={`/products/${item.productId}`} className="relative w-full sm:w-32 h-auto sm:h-40 block flex-shrink-0 bg-gray-100 p-2 box-border flex justify-center items-center overflow-hidden rounded-md">
                                                     <img
-                                                        src={item.imageUrl || item.product?.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                        alt={item.productName || item.product?.name}
+                                                        src={item.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                        alt={item.productName}
                                                         className="block max-w-full max-h-full object-contain rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
                                                     />
                                                 </Link>
                                                 <div className="flex-grow flex flex-col justify-between w-full">
                                                     <div>
                                                         <Link to={`/products/${item.productId}`} className="text-lg font-semibold text-slate-800 hover:text-indigo-600 line-clamp-2">
-                                                            {item.productName || item.product?.name}
+                                                            {item.productName}
                                                         </Link>
                                                         <p className="text-sm text-slate-500 mt-1">Đơn giá: ${unitPriceUSD.toFixed(2)}</p>
                                                     </div>
@@ -269,7 +245,7 @@ const CartPage = () => {
                                                             )}
                                                         </div>
                                                         <button
-                                                            onClick={() => handleRemoveItem(item.orderItemId)}
+                                                            onClick={() => handleRemoveItem(item)}
                                                             disabled={isProcessing}
                                                             className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full focus:outline-none focus:ring-1 focus:ring-red-500"
                                                             title="Xóa sản phẩm"
@@ -300,6 +276,7 @@ const CartPage = () => {
                                             value={selectedProvince}
                                             onChange={(e) => setSelectedProvince(e.target.value)}
                                             className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            disabled={items.length === 0}
                                         >
                                             <option value="">-- Chọn Tỉnh/Thành phố --</option>
                                             {provinces.map(province => (
@@ -321,9 +298,10 @@ const CartPage = () => {
                                             onChange={(e) => setShippingAddress(e.target.value)}
                                             placeholder="Ví dụ: 123 Đường ABC, Phường XYZ, Quận GHI"
                                             className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            disabled={items.length === 0}
                                         />
                                     </div>
-                                    {selectedProvince && shippingTime && (
+                                    {selectedProvince && shippingTime && items.length > 0 && (
                                         <div className={`p-3 rounded-md text-sm ${calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
                                             <p><FaMapMarkerAlt className="inline mr-2" />Giao đến: <strong>{selectedProvince}</strong></p>
                                             <p>Phí vận chuyển: <strong>${calculatedShippingFee.toFixed(2)}</strong></p>
@@ -356,7 +334,7 @@ const CartPage = () => {
                                     disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince)}
                                     className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition-all text-center font-semibold text-base disabled:opacity-50"
                                 >
-                                    Tiến hành thanh toán
+                                    {isLoggedIn ? "Tiến hành thanh toán" : "Đăng nhập để thanh toán"}
                                 </button>
                             </div>
                         </div>
