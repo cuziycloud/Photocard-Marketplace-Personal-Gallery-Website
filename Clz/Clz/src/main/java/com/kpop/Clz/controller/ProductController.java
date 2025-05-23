@@ -58,7 +58,7 @@ public class ProductController {
             Product existingProduct = productOptional.get();
             existingProduct.setName(productDetails.getName());
             existingProduct.setGroup(productDetails.getGroup());
-            existingProduct.setVersion(productDetails.getVersion());
+            existingProduct.setMember(productDetails.getMember());
             existingProduct.setDescription(productDetails.getDescription());
             existingProduct.setPrice(productDetails.getPrice());
             existingProduct.setImageUrl(productDetails.getImageUrl());

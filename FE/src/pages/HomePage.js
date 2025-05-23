@@ -145,7 +145,7 @@ const HomePage = () => {
                     switch (filterKey) {
                         case 'priceMax': return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice <= parseFloat(filterValue);
                         case 'priceMin': return !isNaN(productPrice) && !isNaN(parseFloat(filterValue)) && productPrice >= parseFloat(filterValue);
-                        case 'version': return product.version && product.version.toLowerCase() === String(filterValue).toLowerCase();
+                        case 'member': return product.member && product.member.toLowerCase() === String(filterValue).toLowerCase();
                         default: return true;
                     }
                 });
@@ -388,7 +388,7 @@ const HomePage = () => {
 
             {displayedProducts.length > 0 && (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 transition-opacity duration-300">
+                    <div className="pt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 transition-opacity duration-300">
                         {paginatedProducts.map(product => (
                             <div
                                 key={product.id}
@@ -449,7 +449,7 @@ const HomePage = () => {
                                         <h3 className="text-[0.95rem] font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors leading-snug line-clamp-2 min-h-[2.4em]" title={product.name}>
                                             {product.name}
                                         </h3>
-                                        {product.version && (<p className="text-xs text-slate-500 mt-0.5">Ver: {product.version}</p>)}
+                                        {product.member && (<p className="text-xs text-slate-500 mt-0.5">Member: {product.member}</p>)}
                                     </div>
                                     <div className="mt-2.5">
                                         <div className="flex justify-between items-center">

@@ -30,7 +30,7 @@ public class Product {
     private Group group;
 
     @Column(length = 100)
-    private String version;
+    private String member;
 
     @Lob
     @Column(columnDefinition = "TEXT")
