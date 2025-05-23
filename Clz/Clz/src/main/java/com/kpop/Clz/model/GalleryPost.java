@@ -19,6 +19,9 @@ public class GalleryPost {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
+
     @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
 

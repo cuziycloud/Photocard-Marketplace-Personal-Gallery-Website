@@ -1,6 +1,7 @@
 package com.kpop.Clz.service;
 
 import com.kpop.Clz.model.GalleryPost;
+import com.kpop.Clz.model.User;
 import com.kpop.Clz.repository.GalleryPostRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,12 +25,13 @@ public class GalleryPostService {
     }
 
     @Transactional
-    public GalleryPost createPost(GalleryPost postDataFromRequest) {
+    public GalleryPost createPost(GalleryPost postDataFromRequest, User authenticatedUser) {
         GalleryPost newPost = new GalleryPost();
         newPost.setImageUrl(postDataFromRequest.getImageUrl());
         newPost.setCaption(postDataFromRequest.getCaption());
-        newPost.setPostedByUsername(postDataFromRequest.getPostedByUsername() != null ? postDataFromRequest.getPostedByUsername() : "Demo User");
-        newPost.setPostedByAvatarUrl(postDataFromRequest.getPostedByAvatarUrl() != null ? postDataFromRequest.getPostedByAvatarUrl() : "https://i.pravatar.cc/150?u=demo");
+        newPost.setUserId(authenticatedUser.getId());
+        newPost.setPostedByUsername(postDataFromRequest.getPostedByUsername() != null ? postDataFromRequest.getPostedByUsername() : "Duchin");
+        newPost.setPostedByAvatarUrl(postDataFromRequest.getPostedByAvatarUrl() != null ? postDataFromRequest.getPostedByAvatarUrl() : "https://i.pinimg.com/736x/24/eb/1f/24eb1f32e2286d3251a2634adcf60592.jpg");
 
         newPost.setLikesCount(0);
         newPost.setCommentsCount(0);
