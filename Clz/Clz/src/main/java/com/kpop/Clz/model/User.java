@@ -1,4 +1,3 @@
-// src/main/java/com/kpop/Clz/model/User.java
 package com.kpop.Clz.model;
 
 import jakarta.persistence.*;

@@ -11,7 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserWishlistService {
@@ -78,5 +82,23 @@ public class UserWishlistService {
             return false;
         }
         return userWishlistRepository.existsByIdUserIdAndIdProductId(userId, productId);
+    }
+
+    public Map<String, Boolean> checkMultipleProductsInWishlist(Integer userId, List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        if (!userRepository.existsById(userId)) {
+            return productIds.stream()
+                    .collect(Collectors.toMap(String::valueOf, id -> false));
+        }
+
+        Set<Long> idsInWishlist = userWishlistRepository.findExistingProductIdsByUserIdAndProductIdsIn(userId, productIds);
+
+        return productIds.stream()
+                .collect(Collectors.toMap(
+                        String::valueOf,
+                        idsInWishlist::contains
+                ));
     }
 }

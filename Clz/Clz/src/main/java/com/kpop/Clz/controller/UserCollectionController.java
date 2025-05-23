@@ -7,12 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.kpop.Clz.dto.ProductIdsRequest;
+import jakarta.validation.Valid;
+
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users/{userId}/collections")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserCollectionController {
 
     private final UserCollectionService userCollectionService;
@@ -58,5 +60,13 @@ public class UserCollectionController {
             @PathVariable Long productId) {
         boolean isInCollection = userCollectionService.isProductInCollection(userId, productId);
         return ResponseEntity.ok(Map.of("isInCollection", isInCollection));
+    }
+
+    @PostMapping("/check-multiple")
+    public ResponseEntity<Map<String, Boolean>> checkMultipleProductsInCollection(
+            @PathVariable Integer userId,
+            @Valid @RequestBody ProductIdsRequest request) {
+        Map<String, Boolean> result = userCollectionService.checkMultipleProductsInCollection(userId, request.getProductIds());
+        return ResponseEntity.ok(result);
     }
 }

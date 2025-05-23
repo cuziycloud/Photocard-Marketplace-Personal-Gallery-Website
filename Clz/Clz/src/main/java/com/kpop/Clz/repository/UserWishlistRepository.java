@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface UserWishlistRepository extends JpaRepository<UserWishlistItem, UserWishlistItemId> {
@@ -32,4 +33,18 @@ public interface UserWishlistRepository extends JpaRepository<UserWishlistItem, 
     // Xóa một sản phẩm khỏi wishlist của user
     @Transactional
     void deleteByIdUserIdAndIdProductId(Integer userId, Long productId);
+
+
+    @Query("SELECT uc.product FROM UserCollection uc WHERE uc.id.userId = :userId")
+    List<Product> findCollectedProductsByUserId(@Param("userId") Integer userId);
+
+    @Query("SELECT uc.product FROM UserCollection uc WHERE uc.id.userId = :userId ORDER BY uc.collectedAt Desc")
+    List<Product> findCollectedProductsByUserIdOrderByCollectedAtDesc(@Param("userId") Integer userId);
+
+
+    @Query("SELECT uc.id.productId FROM UserCollection uc WHERE uc.id.userId = :userId AND uc.id.productId IN :productIds")
+    Set<Long> findExistingProductIdsByUserIdAndProductIdsIn(
+            @Param("userId") Integer userId,
+            @Param("productIds") List<Long> productIds
+    );
 }

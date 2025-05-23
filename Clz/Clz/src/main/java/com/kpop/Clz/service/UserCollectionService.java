@@ -11,8 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Date; // Hoặc java.time.LocalDateTime
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserCollectionService {
@@ -78,5 +78,23 @@ public class UserCollectionService {
             throw new ResourceNotFoundException("Product not found with id: " + productId);
         }
         return userCollectionRepository.existsByIdUserIdAndIdProductId(userId, productId);
+    }
+
+    public Map<String, Boolean> checkMultipleProductsInCollection(Integer userId, List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        if (!userRepository.existsById(userId)) {
+            return productIds.stream()
+                    .collect(Collectors.toMap(String::valueOf, id -> false));
+        }
+
+        Set<Long> idsInCollection = userCollectionRepository.findExistingProductIdsByUserIdAndProductIdsIn(userId, productIds);
+
+        return productIds.stream()
+                .collect(Collectors.toMap(
+                        String::valueOf,
+                        idsInCollection::contains
+                ));
     }
 }

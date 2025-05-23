@@ -7,12 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.kpop.Clz.dto.ProductIdsRequest;
+import jakarta.validation.Valid;
+
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users/{userId}/wishlist")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserWishlistController {
 
     private final UserWishlistService userWishlistService;
@@ -58,5 +60,14 @@ public class UserWishlistController {
             @PathVariable Long productId) {
         boolean isInWishlist = userWishlistService.isProductInWishlist(userId, productId);
         return ResponseEntity.ok(Map.of("isInWishlist", isInWishlist));
+    }
+
+    @PostMapping("/check-multiple")
+    public ResponseEntity<Map<String, Boolean>> checkMultipleProductsInWishlist(
+            @PathVariable Integer userId,
+            @Valid @RequestBody ProductIdsRequest request) {
+
+        Map<String, Boolean> result = userWishlistService.checkMultipleProductsInWishlist(userId, request.getProductIds());
+        return ResponseEntity.ok(result);
     }
 }
