@@ -45,10 +45,8 @@ const CartPage = () => {
         await updateItemQuantity(item.orderItemId, newQuantity);
     }, [updateItemQuantity]);
 
-    const handleRemoveItem = useCallback(async (orderItemId, productName) => {
-        if (window.confirm(`Bạn có chắc muốn xóa "${productName}" khỏi giỏ hàng?`)) {
-            await removeItemFromCart(orderItemId);
-        }
+    const handleRemoveItem = useCallback(async (orderItemId) => {
+        await removeItemFromCart(orderItemId);
     }, [removeItemFromCart]);
 
     const calculateShipping = useCallback((provinceValue) => {

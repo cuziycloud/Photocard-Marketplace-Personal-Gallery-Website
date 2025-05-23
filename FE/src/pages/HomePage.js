@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     FaRegHeart,
     FaHeart,
@@ -44,6 +44,8 @@ const HomePage = () => {
     const [selectedProductForModal, setSelectedProductForModal] = useState(null);
     const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '', productId: null });
 
+    const isInitialLoadOrCategoryChange = useRef(true); 
+
     useEffect(() => {
         if (selectedProductForModal) {
             document.body.style.overflow = 'hidden';
@@ -55,16 +57,25 @@ const HomePage = () => {
         };
     }, [selectedProductForModal]);
 
-    const fetchProductsAndAllStatuses = useCallback(async (currentGroupId) => {
+    const fetchProductsAndAllStatuses = useCallback(async (currentGroupId, isNewFetch = true) => {
         setLoading(true);
         setError(null);
-        setAllFetchedProducts([]);
+
+        if (isNewFetch) {
+             setAllFetchedProducts([]); 
+        }
+
 
         try {
             const params = currentGroupId ? { groupId: currentGroupId } : {};
             const productsResponse = await axios.get(`${API_BASE_URL}/products`, { params });
-            const fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
+            let fetchedProducts = Array.isArray(productsResponse.data) ? productsResponse.data : (productsResponse.data.content || []);
 
+            // shuffle nếu reload hoặc đổi group (Categories)
+            if (isNewFetch) {
+                fetchedProducts = shuffleArray(fetchedProducts);
+            }
+            
             setAllFetchedProducts(fetchedProducts);
 
             if (fetchedProducts.length > 0 && MOCK_USER_ID) {
@@ -100,19 +111,30 @@ const HomePage = () => {
         } finally {
             setLoading(false);
         }
-    }, [MOCK_USER_ID]);
+    }, []); 
 
     useEffect(() => {
         const groupId = selectedCategory ? selectedCategory.id : null;
+        isInitialLoadOrCategoryChange.current = true; 
         const handler = setTimeout(() => {
-            fetchProductsAndAllStatuses(groupId);
+            fetchProductsAndAllStatuses(groupId, true);
         }, 50); 
 
         return () => clearTimeout(handler); 
-    }, [selectedCategory, fetchProductsAndAllStatuses]);
-
+    }, [selectedCategory, fetchProductsAndAllStatuses]); 
     useEffect(() => {
-        let productsToProcess = shuffleArray([...allFetchedProducts]);
+        if (loading && allFetchedProducts.length === 0 && !isInitialLoadOrCategoryChange.current) {
+            setDisplayedProducts([]);
+            return;
+        }
+        if (allFetchedProducts.length === 0 && !loading) {
+            setDisplayedProducts([]);
+            setCurrentPage(1);
+            return;
+        }
+
+
+        let productsToProcess = [...allFetchedProducts]; 
 
         if (searchTerm && searchTerm.trim() !== '') {
             const lowerSearchTerm = searchTerm.toLowerCase();
@@ -147,10 +169,15 @@ const HomePage = () => {
                 default: break;
             }
         }
-
+        
         setDisplayedProducts(productsToProcess);
-        setCurrentPage(1);
-    }, [allFetchedProducts, searchTerm, sortOption, activeFilters]);
+        if (isInitialLoadOrCategoryChange.current || searchTerm || Object.keys(activeFilters).length > 0 || sortOption !== 'default') {
+            setCurrentPage(1); 
+        }
+        isInitialLoadOrCategoryChange.current = false; 
+
+    }, [allFetchedProducts, searchTerm, sortOption, activeFilters, loading]);
+
 
     const handleResetFiltersAndSearch = () => {
         setSearchTerm('');
@@ -194,13 +221,15 @@ const HomePage = () => {
         }
     };
 
+    // cập nhật stock, ko shuffle
     const updateProductStockInLists = (productId, newStockQuantity) => {
-        const updateList = (list) => list.map(p =>
-            p.id === productId ? { ...p, stockQuantity: newStockQuantity } : p
+        
+        setAllFetchedProducts(prevProducts =>
+            prevProducts.map(p =>
+                p.id === productId ? { ...p, stockQuantity: newStockQuantity } : p
+            )
         );
-        setAllFetchedProducts(prev => updateList(prev));
-        setDisplayedProducts(prev => updateList(prev));
-
+        
         if (selectedProductForModal && selectedProductForModal.id === productId) {
             setSelectedProductForModal(prev => prev ? { ...prev, stockQuantity: newStockQuantity } : null);
         }
@@ -233,14 +262,15 @@ const HomePage = () => {
         if (success) {
             setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
             const newStock = Math.max(0, product.stockQuantity - quantity);
-            updateProductStockInLists(product.id, newStock);
+            updateProductStockInLists(product.id, newStock); 
         } else {
             setFeedbackMessage({ type: 'error', text: cartContextError || 'Lỗi khi thêm vào giỏ!', productId: product.id });
         }
         setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
 
         return success;
-    }, [addToCart, cartContextError]);
+    }, [addToCart, cartContextError]); 
+
 
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
@@ -323,7 +353,8 @@ const HomePage = () => {
                 <button
                     onClick={() => {
                         setError(null);
-                        fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null);
+                        isInitialLoadOrCategoryChange.current = true; 
+                        fetchProductsAndAllStatuses(selectedCategory ? selectedCategory.id : null, true);
                     }}
                     className="mt-4 px-4 py-2 bg-pink-600 text-white text-sm rounded-md hover:bg-pink-700 transition-colors"
                 >
