@@ -377,7 +377,6 @@ const MyCollectionPage = () => {
 
     return (
         <div className="min-h-screen pt-0 pb-8 px-4 sm:px-6 lg:px-8">
-          
           <div className="w-full mx-auto pt-8">
             <header className="mb-6 pb-4 border-b border-gray-200">
                 <h1 className="text-3xl font-bold text-gray-800 text-center sm:text-left">Bộ sưu tập của tôi</h1>
