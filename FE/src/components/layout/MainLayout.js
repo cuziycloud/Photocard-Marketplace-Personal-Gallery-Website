@@ -29,6 +29,7 @@ const MainLayout = () => {
             <Route path="/collection" element={<MyCollectionPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/wishlist" element={<WishlistPage />} />
+            {/* <Route path="/template" element={<TemplatePage />} /> */}
             <Route path="/cart" element={<CartPage />} />
             <Route path="/admin/add-product" element={<AddProductPage />} />
           </Routes>

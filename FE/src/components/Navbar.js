@@ -172,8 +172,8 @@ const Navbar = () => {
                             Wishlist
                         </NavLink>
                         {isLoggedIn && (
-                            <NavLink to="/myorder" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
-                                My Order
+                            <NavLink to="/template" className={mobileNavLinkClasses} onClick={closeMobileMenu}>
+                                Template
                             </NavLink>
                         )}
                     </div>

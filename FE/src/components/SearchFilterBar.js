@@ -86,7 +86,7 @@
         };
 
         return (
-            <div className="bg-white py-4 px-6">
+            <div className="bg-gray py-4 px-6">
                 {/* Main Search, Sort, Filter Button Bar */}
                 <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4">
                     <form onSubmit={handleSearchSubmit} className="flex items-center w-full md:w-auto md:flex-1 border border-gray-300 rounded-full overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-sky-400">
