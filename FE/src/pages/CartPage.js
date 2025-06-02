@@ -18,6 +18,49 @@ const provinces = [
     { value: 'Khánh Hòa', label: 'Khánh Hòa', region: 'KHAC' },
 ];
 
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        return new Date(dateString).toLocaleDateString('en-US', options);
+    } catch (error) {
+        console.error("Error formatting date:", dateString, error);
+        return dateString;
+    }
+};
+
+const formatCurrencyUSD = (amount) => {
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (typeof numericAmount !== 'number' || isNaN(numericAmount)) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(numericAmount);
+};
+
+const getOrderStatusStyle = (status) => {
+    switch (status?.toUpperCase()) {
+        case 'PENDING':
+            return { text: 'Chờ xử lý', textColor: 'text-yellow-700', bgColor: 'bg-yellow-100', borderColor: 'border-yellow-400' };
+        case 'PROCESSING':
+            return { text: 'Đang xử lý', textColor: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-400' };
+        case 'PAID':
+             return { text: 'Đã thanh toán', textColor: 'text-cyan-700', bgColor: 'bg-cyan-100', borderColor: 'border-cyan-400' };
+        case 'SHIPPED':
+            return { text: 'Đã giao hàng', textColor: 'text-teal-700', bgColor: 'bg-teal-100', borderColor: 'border-teal-400' };
+        case 'DELIVERED':
+            return { text: 'Đã nhận hàng', textColor: 'text-green-700', bgColor: 'bg-green-100', borderColor: 'border-green-400' };
+        case 'COMPLETED':
+            return { text: 'Hoàn thành', textColor: 'text-green-800', bgColor: 'bg-green-200', borderColor: 'border-green-500' };
+        case 'CANCELLED':
+            return { text: 'Đã hủy', textColor: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-400' };
+        default:
+            return { text: status || 'Không xác định', textColor: 'text-gray-700', bgColor: 'bg-gray-100', borderColor: 'border-gray-400' };
+    }
+};
+
 const CartPage = () => {
     const {
         cart,
@@ -27,29 +70,36 @@ const CartPage = () => {
         updateItemQuantity,
         removeItemFromCart,
         updatingItem,
-        removingItem
+        removingItem,
+        clearCart 
     } = useCart();
-    const { currentUser, isLoggedIn, loadingAuth } = useAuth();
+    const { currentUser, isLoggedIn, loadingAuth, getToken } = useAuth();
     const navigate = useNavigate();
 
     const [selectedProvince, setSelectedProvince] = useState('');
     const [shippingAddress, setShippingAddress] = useState('');
     const [calculatedShippingFee, setCalculatedShippingFee] = useState(0);
     const [shippingTime, setShippingTime] = useState('');
+    const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+    const [checkoutError, setCheckoutError] = useState('');
 
-    useEffect(() => {
-        if (!loadingAuth) { 
+    const fetchCartCallback = useCallback(() => {
+        if (isLoggedIn) {
             fetchCart();
+        } else if (!loadingAuth && !isLoggedIn) {
         }
     }, [isLoggedIn, loadingAuth, fetchCart]);
 
+    useEffect(() => {
+        if (!loadingAuth) {
+            fetchCartCallback();
+        }
+    }, [loadingAuth, fetchCartCallback]);
 
     const handleQuantityChange = useCallback(async (item, change) => {
         const newQuantity = item.quantity + change;
         if (newQuantity < 1) return;
-
-        const currentStock = item.stockQuantity; 
-
+        const currentStock = item.stockQuantity;
         if (newQuantity > currentStock) {
             alert(`Số lượng "${item.productName}" yêu cầu (${newQuantity}) vượt quá tồn kho (${currentStock}).`);
             return;
@@ -89,19 +139,18 @@ const CartPage = () => {
     }, [cart?.items]);
 
     useEffect(() => {
-        if (selectedProvince) {
+        if (selectedProvince && cart?.items?.length > 0) {
             calculateShipping(selectedProvince);
         } else {
             setCalculatedShippingFee(0);
-            setShippingTime('');
+            setShippingTime(cart?.items?.length > 0 ? 'Vui lòng chọn tỉnh/thành' : '');
         }
     }, [selectedProvince, calculateShipping, cart?.items?.length]);
 
-
-    const handleProceedToCheckout = () => {
+    const handleProceedToCheckout = async () => {
         if (!isLoggedIn || !currentUser) {
             alert("Vui lòng đăng nhập để tiến hành thanh toán.");
-            navigate('/login', { state: { from: '/cart' } }); 
+            navigate('/login', { state: { from: '/cart' } });
             return;
         }
         if (!cart?.items || cart.items.length === 0) {
@@ -121,32 +170,72 @@ const CartPage = () => {
             return;
         }
 
-        const checkoutData = {
-            orderId: cart.orderId,
-            userId: currentUser.id,
+        setIsSubmittingOrder(true);
+        setCheckoutError('');
+
+        const orderPayload = {
             cartItems: cart.items.map(item => ({
                 productId: item.productId,
                 quantity: item.quantity,
-                unitPrice: item.unitPrice
             })),
-            subTotal: totalAmount,
-            shippingFee: calculatedShippingFee,
-            totalPayable: finalTotalToDisplay,
-            shippingInfo: {
-                address: shippingAddress,
-                province: selectedProvince,
-                estimatedTime: shippingTime,
-            }
+            shippingAddress: shippingAddress.trim(),
+            selectedProvince: selectedProvince,
+            phoneNumber: currentUser.phoneNumber || '',
+            frontendCalculatedShippingFee: calculatedShippingFee,
         };
-        console.log("Proceeding to checkout with data (USD):", checkoutData);
-        alert("Chức năng thanh toán chưa được triển khai! Dữ liệu đã được log ra console.");
+
+        console.log("Submitting order with payload:", orderPayload);
+
+        try {
+            const token = await getToken();
+            if (!token) {
+                throw new Error("Không thể lấy token xác thực. Vui lòng đăng nhập lại.");
+            }
+
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(orderPayload),
+            });
+
+            if (!response.ok) {
+                let errorMessage = `Lỗi ${response.status} khi tạo đơn hàng.`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    console.error("Raw error response from create order:", errorText);
+                }
+                throw new Error(errorMessage);
+            }
+
+            const createdOrderData = await response.json();
+            alert(`Đơn hàng #${createdOrderData.id || 'mới'} đã được tạo thành công!`);
+            console.log("Order created successfully:", createdOrderData);
+
+            if (typeof clearCart === 'function') {
+                await clearCart();
+            } else {
+                fetchCart();
+            }
+            navigate(`/my-orders`);
+        } catch (error) {
+            console.error("Failed to create order:", error);
+            setCheckoutError(error.message || "Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.");
+        } finally {
+            setIsSubmittingOrder(false);
+        }
     };
 
-    if (loadingAuth || (loadingCart && cart.items.length === 0 && !cartError)) {
+    if (loadingAuth || (loadingCart && (!cart || cart.items.length === 0) && !cartError)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen py-24 bg-gray-50">
                 <FaSpinner className="animate-spin text-5xl text-indigo-500 mb-4" />
-                <p className="text-lg text-gray-600">Đang tải dữ liệu giỏ hàng...</p>
+                <p className="text-lg text-gray-600">Đang tải dữ liệu...</p>
             </div>
         );
     }
@@ -157,18 +246,17 @@ const CartPage = () => {
                 <FaExclamationCircle className="text-6xl text-red-400 mb-4" />
                 <h2 className="text-2xl font-bold text-red-600 mb-2">Đã xảy ra lỗi</h2>
                 <p className="text-gray-700 mb-4">{cartError}</p>
-                <button onClick={() => fetchCart()} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Thử lại</button>
+                <button onClick={fetchCartCallback} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Thử lại</button>
             </div>
         );
     }
 
     const items = cart?.items || [];
-    const totalQuantityFromContext = cart?.totalQuantity || 0;
     const totalAmount = cart?.totalAmount || 0;
     const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
     const distinctProductCount = items.length;
 
-    if (items.length === 0 && !loadingCart) {
+    if (items.length === 0 && !loadingCart && !cartError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen text-center py-24 bg-gray-50">
                 <FaShoppingCart className="text-6xl text-gray-300 mb-4" />
@@ -208,7 +296,7 @@ const CartPage = () => {
                                                         <FaSpinner className="animate-spin text-red-500 text-2xl" />
                                                     </div>
                                                 )}
-                                                <Link to={`/products/${item.productId}`} className="relative w-full sm:w-32 h-auto sm:h-40 block flex-shrink-0 bg-gray-100 p-2 box-border flex justify-center items-center overflow-hidden rounded-md">
+                                                <Link to={`/products/${item.productId}`} className="relative w-full sm:w-32 h-auto sm:h-40 block flex-shrink-0 bg-gray-100 p-2 box-border flex justify-center items-center overflow-hidden rounded-md group">
                                                     <img
                                                         src={item.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
                                                         alt={item.productName}
@@ -220,12 +308,12 @@ const CartPage = () => {
                                                         <Link to={`/products/${item.productId}`} className="text-lg font-semibold text-slate-800 hover:text-indigo-600 line-clamp-2">
                                                             {item.productName}
                                                         </Link>
-                                                        <p className="text-sm text-slate-500 mt-1">Đơn giá: ${unitPriceUSD.toFixed(2)}</p>
+                                                        <p className="text-sm text-slate-500 mt-1">Đơn giá: {formatCurrencyUSD(unitPriceUSD)}</p>
                                                     </div>
                                                     <p className="text-xs text-slate-400 mt-1 sm:hidden">Tồn kho: {stockQuantity}</p>
                                                 </div>
                                                 <div className="flex flex-col items-start sm:items-end justify-between sm:min-w-[170px] w-full sm:w-auto pt-2 sm:pt-0">
-                                                    <p className="text-md font-bold text-slate-800 mb-2 sm:mb-0">${itemTotalUSD.toFixed(2)}</p>
+                                                    <p className="text-md font-bold text-slate-800 mb-2 sm:mb-0">{formatCurrencyUSD(itemTotalUSD)}</p>
                                                     <div className="flex items-center gap-2">
                                                         <div className="relative flex items-center border rounded-md shadow-sm">
                                                             <button
@@ -303,9 +391,9 @@ const CartPage = () => {
                                         />
                                     </div>
                                     {selectedProvince && shippingTime && items.length > 0 && (
-                                        <div className={`p-3 rounded-md text-sm ${calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
-                                            <p><FaMapMarkerAlt className="inline mr-2" />Giao đến: <strong>{selectedProvince}</strong></p>
-                                            <p>Phí vận chuyển: <strong>${calculatedShippingFee.toFixed(2)}</strong></p>
+                                        <div className={`p-3 rounded-md text-sm ${calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}`}>
+                                            <p><FaMapMarkerAlt className="inline mr-1.5 -mt-0.5" />Giao đến: <strong>{selectedProvince}</strong></p>
+                                            <p>Phí vận chuyển: <strong>{formatCurrencyUSD(calculatedShippingFee)}</strong></p>
                                             <p>Thời gian vận chuyển: <strong>{shippingTime}</strong></p>
                                         </div>
                                     )}
@@ -317,29 +405,34 @@ const CartPage = () => {
                                 <div className="bg-gray-50 p-4 rounded-lg space-y-3 text-sm border">
                                     <div className="flex justify-between text-slate-600">
                                         <span>Tạm tính ({distinctProductCount} sản phẩm)</span>
-                                        <span>${totalAmount.toFixed(2)}</span>
+                                        <span>{formatCurrencyUSD(totalAmount)}</span>
                                     </div>
-                                    {/* <div className="flex justify-between text-slate-600">
-                                        <span>Số lượng mua ({totalQuantityFromContext})</span>
-                                        <span>${totalAmount.toFixed(2)}</span>
-                                    </div> */}
                                     <div className="flex justify-between text-slate-600">
                                         <span>Phí vận chuyển</span>
                                         <span>
-                                            {selectedProvince && items.length > 0 ? `$${calculatedShippingFee.toFixed(2)}` : (items.length > 0 ? "Chọn địa chỉ" : "$0.00")}
+                                            {selectedProvince && items.length > 0 ? formatCurrencyUSD(calculatedShippingFee) : (items.length > 0 ? "Chọn địa chỉ" : formatCurrencyUSD(0))}
                                         </span>
                                     </div>
                                     <div className="border-t border-gray-300 pt-3 mt-3 flex justify-between text-lg font-bold text-slate-800">
                                         <span>Tổng cộng</span>
-                                        <span>${finalTotalToDisplay.toFixed(2)}</span>
+                                        <span>{formatCurrencyUSD(finalTotalToDisplay)}</span>
                                     </div>
                                 </div>
+                                {checkoutError && (
+                                    <p className="mt-4 text-sm text-red-600 text-center bg-red-50 p-3 rounded-md border border-red-300">
+                                        {checkoutError}
+                                    </p>
+                                )}
                                 <button
                                     onClick={handleProceedToCheckout}
-                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince)}
-                                    className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition-all text-center font-semibold text-base disabled:opacity-50"
+                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince) || isSubmittingOrder}
+                                    className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition-all text-center font-semibold text-base disabled:opacity-50 flex items-center justify-center"
                                 >
-                                    {isLoggedIn ? "Tiến hành thanh toán" : "Đăng nhập để thanh toán"}
+                                    {isSubmittingOrder ? (
+                                        <>
+                                            <FaSpinner className="animate-spin mr-2" /> Đang xử lý...
+                                        </>
+                                    ) : (isLoggedIn ? "Tiến hành thanh toán" : "Đăng nhập để thanh toán")}
                                 </button>
                             </div>
                         </div>
