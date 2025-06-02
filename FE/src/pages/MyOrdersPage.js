@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'; 
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp, FaFilter, FaSearch, FaDollarSign } from 'react-icons/fa';
+import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp, FaFilter, FaSearch } from 'react-icons/fa'; // Bỏ FaDollarSign vì formatCurrencyUSD đã có $
 
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -20,11 +20,10 @@ const formatCurrencyUSD = (amount) => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2  
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     }).format(numericAmount);
 };
-
 
 const getOrderStatusStyle = (status) => {
     switch (status?.toUpperCase()) {
@@ -48,10 +47,10 @@ const getOrderStatusStyle = (status) => {
 };
 
 const MyOrdersPage = () => {
-    const { currentUser, getToken, loadingAuth } = useAuth(); 
+    const { currentUser, getToken, loadingAuth } = useAuth();
     const [allOrders, setAllOrders] = useState([]);
     const [filteredOrders, setFilteredOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); 
     const [error, setError] = useState('');
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
@@ -68,9 +67,7 @@ const MyOrdersPage = () => {
             }
 
             const response = await fetch('/api/orders/my-orders', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers: { 'Authorization': `Bearer ${token}` },
             });
             
             if (response.status === 204) {
@@ -87,15 +84,20 @@ const MyOrdersPage = () => {
                 try {
                     const errData = await response.json();
                     errorMessage = errData.message || errorMessage;
-                } catch (parseError) { 
-
-                }
+                } catch (parseError) {}
                 throw new Error(errorMessage);
             }
             
             const data = await response.json();
             const ordersData = data || [];
-            const sortedOrders = ordersData.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+            const sortedOrders = ordersData.sort((a, b) => {
+                const dateA = new Date(a.orderDate);
+                const dateB = new Date(b.orderDate);
+                if (isNaN(dateA) && isNaN(dateB)) return 0;
+                if (isNaN(dateA)) return 1; 
+                if (isNaN(dateB)) return -1;
+                return dateB - dateA;
+            });
             setAllOrders(sortedOrders);
             setFilteredOrders(sortedOrders);
         } catch (err) {
@@ -107,17 +109,17 @@ const MyOrdersPage = () => {
     }, [getToken]); 
 
     useEffect(() => {
-        if (loadingAuth) { 
+        if (loadingAuth) {
+            setLoading(true); 
             return;
         }
-        if (!currentUser) { 
+        if (!currentUser) {
             setLoading(false);
             setError("Bạn cần đăng nhập để xem đơn hàng.");
             return;
         }
         fetchOrders();
-    }, [currentUser, loadingAuth, fetchOrders]); 
-
+    }, [currentUser, loadingAuth, fetchOrders]);
 
     useEffect(() => {
         let tempOrders = [...allOrders];
@@ -138,9 +140,44 @@ const MyOrdersPage = () => {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
     };
 
-    if (loading) {}
-    if (error) {}
-    if (allOrders.length === 0 && !loading) {}
+    if (loading) { 
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+                <FaRedo className="text-4xl text-sky-600 animate-spin mb-4" />
+                <p className="text-lg text-gray-700">Đang tải danh sách đơn hàng...</p>
+            </div>
+        );
+    }
+    if (error) { 
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+                <FaInfoCircle className="text-5xl text-red-500 mb-4" />
+                <p className="text-xl text-red-700 mb-2">Lỗi!</p>
+                <p className="text-md text-gray-600 mb-6">{error}</p>
+                <button
+                    onClick={fetchOrders}
+                    className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center"
+                >
+                    <FaRedo className="mr-2" /> Thử lại
+                </button>
+            </div>
+        );
+    }
+    if (allOrders.length === 0 && !loading && !error) { 
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+                <FaShoppingBag className="text-6xl text-gray-400 mb-6" />
+                <h2 className="text-2xl font-semibold text-gray-700 mb-3">Bạn chưa có đơn hàng nào</h2>
+                <p className="text-gray-500 mb-6">Hãy bắt đầu mua sắm để xem các đơn hàng của bạn tại đây.</p>
+                <Link
+                    to="/products" 
+                    className="px-8 py-3 bg-sky-600 text-white font-medium rounded-lg hover:bg-sky-700 transition-colors shadow-md"
+                >
+                    Khám phá sản phẩm
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
@@ -228,7 +265,7 @@ const MyOrdersPage = () => {
                                                     <span className={`px-3 py-1 text-xs font-bold rounded-full ${statusStyle.bgColor} ${statusStyle.textColor} border ${statusStyle.borderColor}`}>
                                                         {statusStyle.text.toUpperCase()}
                                                     </span>
-                                                    <p className="text-lg sm:text-xl font-bold text-gray-800">{formatCurrencyUSD(order.totalAmount)}</p>
+                                                    <p className="text-lg sm:text-xl font-bold text-gray-800">{formatCurrencyUSD(order.grandTotal)}</p>
                                                 </div>
                                                 <div className="p-1 text-gray-500 hover:text-sky-600 sm:ml-2 self-center sm:self-auto">
                                                     {isExpanded ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
@@ -245,7 +282,7 @@ const MyOrdersPage = () => {
                                                             <img
                                                                 src={item.imageUrl || 'https://via.placeholder.com/64?text=N/A'}
                                                                 alt={item.productName || 'Sản phẩm'}
-                                                                className="w-16 object-cover rounded-md border border-gray-200 flex-shrink-0"
+                                                                className="w-16 h-16 object-contain bg-gray-100 rounded-md border border-gray-200 flex-shrink-0"
                                                             />
                                                             <div className="flex-grow min-w-0"> 
                                                                 <Link to={`/products/${item.productId}`} className="font-semibold text-gray-800 hover:text-sky-600 transition-colors block truncate" title={item.productName}>
@@ -261,6 +298,22 @@ const MyOrdersPage = () => {
                                                     ))}
                                                 </div>
 
+                                                <div className="mb-6 pt-4 border-t border-gray-200 space-y-2 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Tiền hàng (Subtotal):</span>
+                                                        <span className="font-medium text-gray-800">{formatCurrencyUSD(order.subTotalProducts)}</span> 
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Phí vận chuyển:</span>
+                                                        <span className="font-medium text-gray-800">{formatCurrencyUSD(order.shippingFee)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-bold text-md">
+                                                        <span className="text-gray-800">Tổng cộng:</span>
+                                                        <span className="text-sky-700">{formatCurrencyUSD(order.grandTotal)}</span>
+                                                    </div>
+                                                </div>
+
+
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
                                                     <div>
                                                         <h4 className="text-sm font-semibold text-gray-600 mb-1">Địa chỉ giao hàng:</h4>
@@ -271,24 +324,7 @@ const MyOrdersPage = () => {
                                                         <p className="text-sm text-gray-800">{order.phoneNumber || 'Chưa có thông tin'}</p>
                                                     </div>
                                                 </div>
-
                                                 <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
-                                                    {order.status?.toUpperCase() === 'PENDING' && (
-                                                        <button className="px-5 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors shadow-sm w-full sm:w-auto">
-                                                            Hủy đơn
-                                                        </button>
-                                                    )}
-                                                    {(order.status?.toUpperCase() === 'DELIVERED' || order.status?.toUpperCase() === 'COMPLETED') && (
-                                                        <button className="px-5 py-2 text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 rounded-lg transition-colors shadow-sm w-full sm:w-auto">
-                                                            Mua lại
-                                                        </button>
-                                                    )}
-                                                    <Link
-                                                        to={`/order-tracking/${order.id}`}
-                                                        className="px-5 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors shadow-sm w-full sm:w-auto text-center"
-                                                    >
-                                                        Theo dõi đơn hàng
-                                                    </Link>
                                                 </div>
                                             </section>
                                         )}

@@ -8,32 +8,48 @@ import java.util.List;
 public class OrderDTO {
     private Integer id;
     private LocalDateTime orderDate;
-    private BigDecimal totalAmount;
+    private BigDecimal subTotalProducts;
+    private BigDecimal shippingFee;
+    private BigDecimal grandTotal;
     private Order.OrderStatus status;
     private String shippingAddress;
     private String phoneNumber;
     private List<OrderItemDTO> items;
 
-    // Constructors
     public OrderDTO() {}
 
-    public OrderDTO(Integer id, LocalDateTime orderDate, BigDecimal totalAmount, Order.OrderStatus status, String shippingAddress, String phoneNumber, List<OrderItemDTO> items) {
+    public OrderDTO(Integer id,
+                    LocalDateTime orderDate,
+                    BigDecimal subTotalProducts,
+                    BigDecimal shippingFee,
+                    BigDecimal grandTotal,
+                    Order.OrderStatus status,
+                    String shippingAddress,
+                    String phoneNumber,
+                    List<OrderItemDTO> items) {
         this.id = id;
         this.orderDate = orderDate;
-        this.totalAmount = totalAmount;
+        this.subTotalProducts = subTotalProducts;
+        this.shippingFee = shippingFee;
+        this.grandTotal = grandTotal;
         this.status = status;
         this.shippingAddress = shippingAddress;
         this.phoneNumber = phoneNumber;
         this.items = items;
     }
 
-    // Getters and Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public LocalDateTime getOrderDate() { return orderDate; }
     public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+
+    public BigDecimal getSubTotalProducts() { return subTotalProducts; }
+    public void setSubTotalProducts(BigDecimal subTotalProducts) { this.subTotalProducts = subTotalProducts; }
+
+    public BigDecimal getShippingFee() { return shippingFee; }
+    public void setShippingFee(BigDecimal shippingFee) { this.shippingFee = shippingFee; }
+    public BigDecimal getGrandTotal() { return grandTotal; }
+    public void setGrandTotal(BigDecimal grandTotal) { this.grandTotal = grandTotal; }
     public Order.OrderStatus getStatus() { return status; }
     public void setStatus(Order.OrderStatus status) { this.status = status; }
     public String getShippingAddress() { return shippingAddress; }
