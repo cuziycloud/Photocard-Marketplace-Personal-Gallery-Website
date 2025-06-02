@@ -12,21 +12,13 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.kpop.Clz.service.AuthService;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 
+import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -38,15 +30,32 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> registerUser(
+            @RequestParam("username") String username,
+            @RequestParam("email") String email,
+            @RequestParam("password") String password,
+            @RequestParam("phoneNumber") String phoneNumber,
+            @RequestParam(name = "avatar", required = false) MultipartFile avatarFile) { // Key "avatar" matches frontend FormData
+
         try {
-            User registeredUser = authService.registerUser(registerRequest);
+            User registeredUser = authService.registerUser(username, email, password, phoneNumber, avatarFile);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("message", "User registered successfully",
                             "userId", registeredUser.getId()));
         } catch (IllegalArgumentException e) {
+            // This exception should ideally be thrown by your authService for specific validation errors
+            // (e.g., username/email already exists, password too weak - if you implement that)
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        } catch (Exception e) {
+        } catch (IOException e) { // Specifically catch IOException for file storage issues
+            // Log this error server-side
+            System.err.println("File storage error during registration: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Error storing avatar file. Please try again."));
+        }
+        catch (Exception e) {
+            // Log this error server-side
+            System.err.println("Unexpected error during registration: " + e.getMessage());
+            e.printStackTrace(); // For more details during development
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "An unexpected error occurred during registration."));
         }

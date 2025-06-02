@@ -63,21 +63,19 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (username, email, password) => {
+    const register = async (formData) => { 
         try {
-            const response = await axios.post(`${API_BASE_URL}/auth/register`, {
-                username,
-                email,
-                password,
+            const response = await axios.post(`${API_BASE_URL}/auth/register`, formData, {
             });
+
             if (response.data && response.data.message) {
-                console.log("AuthProvider: Registration successful.");
-                return response.data;
+                console.log("AuthProvider: Registration successful.", response.data);
+                return response.data; 
             } else {
                 throw new Error(response.data?.message || 'Invalid response from server during registration');
             }
         } catch (error) {
-            console.error('Registration failed:', error.response?.data?.message || error.message);
+            console.error('Registration failed in AuthContext:', error.response?.data?.message || error.message);
             throw new Error(error.response?.data?.message || 'Registration failed. Please try again.');
         }
     };

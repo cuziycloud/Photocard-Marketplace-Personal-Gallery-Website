@@ -20,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,8 +50,14 @@ public class AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
+    private final FileStorageService fileStorageService;
+
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
+
+    public AuthService(FileStorageService fileStorageService) {
+        this.fileStorageService = fileStorageService;
+    }
 
 
     public void requestPasswordReset(String email) {
@@ -102,21 +110,30 @@ public class AuthService {
         return false;
     }
 
-    @Transactional
-    public User registerUser(RegisterRequest registerRequest) {
-        if (userRepository.existsByUsername(registerRequest.getUsername())) {
+    public User registerUser(String username, String email, String password, String phoneNumber, MultipartFile avatarFile) throws IOException {
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Error: Username is already taken!");
         }
 
-        if (userRepository.existsByEmail(registerRequest.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Error: Email is already in use!");
         }
 
         User user = new User();
-        user.setUsername(registerRequest.getUsername());
-        user.setEmail(registerRequest.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setRole(User.Role.customer);
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPhoneNumber(phoneNumber); // Make sure your User entity has this setter
+        user.setPasswordHash(passwordEncoder.encode(password)); // Assuming User entity field is passwordHash
+
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            // storeFile should throw IOException on failure
+            String avatarUrl = fileStorageService.storeFile(avatarFile);
+            user.setAvatarUrl(avatarUrl); // Assuming User entity has avatarUrl setter
+        }
+
+        user.setRole(User.Role.customer); // Or your actual Role enum/logic
+        // user.setCreatedAt(LocalDateTime.now()); // If not using @CreationTimestamp
+        // user.setUpdatedAt(LocalDateTime.now()); // If not using @UpdateTimestamp
 
         return userRepository.save(user);
     }
