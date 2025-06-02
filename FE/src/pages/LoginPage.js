@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react'; 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,13 +7,16 @@ const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [avatarFile, setAvatarFile] = useState(null); 
+    const [avatarPreview, setAvatarPreview] = useState(null); 
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
     const { login, register } = useAuth();
-
+    const avatarInputRef = useRef(null); 
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -28,6 +31,22 @@ const LoginPage = () => {
         }
     };
 
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setAvatarFile(file);
+            // Tạo URL xem trước (tùy chọn)
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatarPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setAvatarFile(null);
+            setAvatarPreview(null);
+        }
+    };
+
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
         if (password !== confirmPassword) {
@@ -36,14 +55,21 @@ const LoginPage = () => {
         }
         setError('');
         setLoading(true);
+
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('phoneNumber', phoneNumber);
+        if (avatarFile) {
+            formData.append('avatar', avatarFile);
+        }
+
         try {
-            await register(username, email, password);
+            await register(formData);
             alert('Registration successful! Please login.');
             setActiveTab('login');
-            setUsername('');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
+            resetFormFields();
         } catch (err) {
             setError(err.message || 'Failed to register. Please try again.');
         } finally {
@@ -51,17 +77,32 @@ const LoginPage = () => {
         }
     };
 
+    const resetFormFields = () => {
+        setEmail('');
+        setPassword('');
+        setUsername('');
+        setConfirmPassword('');
+        setPhoneNumber('');
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        if (avatarInputRef.current) {
+            avatarInputRef.current.value = ""; 
+        }
+        setError('');
+    };
+
     const commonInputClass = "w-full px-4 py-3 rounded-lg bg-gray-200 mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none";
     const commonButtonClass = "w-full block bg-indigo-600 hover:bg-indigo-500 focus:bg-indigo-500 text-white font-semibold rounded-lg px-4 py-3 transition-colors duration-300";
+    const commonLabelClass = "block text-sm font-medium text-gray-700";
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl w-full space-y-6 bg-white p-8 sm:p-10 rounded-xl shadow-2xl">
+            <div className="w-full space-y-6 bg-white p-8 sm:p-10 rounded-xl shadow-2xl transition-all duration-300">
                 <div>
                     <Link to="/" className="flex justify-center">
                         <img
-                            className="mx-auto h-16 w-auto"
-                            src="/assets/img/bite.png" 
+                            className="mx-auto h-12 w-auto"
+                            src="/assets/img/bite.png"
                             alt="K-Clz Logo"
                         />
                     </Link>
@@ -72,7 +113,7 @@ const LoginPage = () => {
 
                 <div className="flex border-b border-gray-300">
                     <button
-                        onClick={() => { setActiveTab('login'); setError(''); setEmail(''); setPassword(''); }}
+                        onClick={() => { setActiveTab('login'); resetFormFields(); }}
                         className={`flex-1 py-3 text-sm font-medium text-center focus:outline-none transition-colors duration-300
                             ${activeTab === 'login'
                                 ? 'border-b-2 border-indigo-600 text-indigo-600'
@@ -81,7 +122,7 @@ const LoginPage = () => {
                         Login
                     </button>
                     <button
-                        onClick={() => { setActiveTab('register'); setError(''); setEmail(''); setPassword(''); setUsername(''); setConfirmPassword(''); }}
+                        onClick={() => { setActiveTab('register'); resetFormFields(); }}
                         className={`flex-1 py-3 text-sm font-medium text-center focus:outline-none transition-colors duration-300
                             ${activeTab === 'register'
                                 ? 'border-b-2 border-indigo-600 text-indigo-600'
@@ -99,6 +140,7 @@ const LoginPage = () => {
 
                 {activeTab === 'login' ? (
                     <form className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-y-6 md:gap-x-6" onSubmit={handleLoginSubmit}>
+                        {/* Login Form Fields */}
                         <div className="md:col-span-1">
                             <label htmlFor="login-email" className="block text-sm font-medium text-gray-700">Email address</label>
                             <input
@@ -142,7 +184,23 @@ const LoginPage = () => {
                         </div>
                     </form>
                 ) : (
+                    // Form đăng ký
                     <form className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-y-8 md:gap-x-6" onSubmit={handleRegisterSubmit}>
+                        <div className="md:col-span-2">
+                            <label htmlFor="register-email" className="block text-sm font-medium text-gray-700">Email address</label>
+                            <input
+                                id="register-email"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                className={commonInputClass}
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+
                         <div className="md:col-span-1">
                             <label htmlFor="register-username" className="block text-sm font-medium text-gray-700">Username</label>
                             <input
@@ -159,20 +217,19 @@ const LoginPage = () => {
                         </div>
 
                         <div className="md:col-span-1">
-                            <label htmlFor="register-email" className="block text-sm font-medium text-gray-700">Email address</label>
+                            <label htmlFor="register-phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
                             <input
-                                id="register-email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
+                                id="register-phone"
+                                name="phoneNumber"
+                                type="tel"
+                                autoComplete="tel"
                                 required
                                 className={commonInputClass}
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Your phone number"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
                             />
                         </div>
-
                         <div className="md:col-span-1">
                             <label htmlFor="register-password" className="block text-sm font-medium text-gray-700">Password</label>
                             <input
@@ -204,6 +261,28 @@ const LoginPage = () => {
                         </div>
 
                         <div className="md:col-span-2">
+                            <label htmlFor="register-avatar" className={commonLabelClass}>Avatar (Optional)</label>
+                            <input
+                                id="register-avatar"
+                                name="avatar"
+                                type="file"
+                                accept="image/*" 
+                                ref={avatarInputRef} 
+                                className="w-full text-sm text-gray-500 mt-2
+                                           file:mr-4 file:py-2 file:px-4
+                                           file:rounded-md file:border-0
+                                           file:text-sm file:font-semibold
+                                           file:bg-indigo-50 file:text-indigo-700
+                                           hover:file:bg-indigo-100"
+                                onChange={handleAvatarChange}
+                            />
+                            {avatarPreview && (
+                                <div className="mt-2">
+                                    <img src={avatarPreview} alt="Avatar Preview" className="h-20 w-20 rounded-full object-cover" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="md:col-span-2">
                             <button type="submit" className={commonButtonClass} disabled={loading}>
                                 {loading ? 'Creating account...' : 'Create Account'}
                             </button>
@@ -215,8 +294,7 @@ const LoginPage = () => {
                     <button
                         onClick={() => {
                             setActiveTab(activeTab === 'login' ? 'register' : 'login');
-                            setError('');
-                            setEmail(''); setPassword(''); setUsername(''); setConfirmPassword('');
+                            resetFormFields();
                         }}
                         className="font-medium text-indigo-600 hover:text-indigo-500 ml-1 focus:outline-none"
                     >

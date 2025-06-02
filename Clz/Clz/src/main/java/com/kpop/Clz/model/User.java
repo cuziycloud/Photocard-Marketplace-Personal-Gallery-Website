@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp; // Cần import
+import org.hibernate.annotations.UpdateTimestamp;   // Cần import
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -26,6 +28,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "phonenumber", length = 20)
+    private String phoneNumber;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -33,11 +38,28 @@ public class User {
     @Column(length = 10)
     private Role role;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<Order> orders = new HashSet<>();
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
     @Column(name = "avatarUrl", length = 500)
     private String avatarUrl;
+
+    @Column(name = "posted_by_avatar_url", length = 500)
+    private String postedByAvatarUrl;
+
+    @Column(name = "posted_by_username", nullable = false, length = 100)
+    private String postedByUsername;
+
+    @Column(name = "user_id", nullable = false)
+    private Integer legacyUserId;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Order> orders = new HashSet<>();
 
     @Column(name = "reset_token")
     private String resetToken;
@@ -45,12 +67,7 @@ public class User {
     @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
-    public String getAvatarUrl() {
-        return this.avatarUrl;
-    }
-
     public enum Role {
         customer, admin
     }
-
 }
