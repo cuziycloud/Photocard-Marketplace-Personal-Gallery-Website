@@ -35,7 +35,7 @@ public class AuthService {
     private AuthenticationManager authenticationManager;
 
     @Autowired
-    private UserDetailsService userDetailsService; // Cần tạo một implementation cho UserDetailsService
+    private UserDetailsService userDetailsService;
 
     @Transactional
     public User registerUser(RegisterRequest registerRequest) {

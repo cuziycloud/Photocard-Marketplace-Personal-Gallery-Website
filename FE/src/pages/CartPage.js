@@ -166,6 +166,7 @@ const CartPage = () => {
     const totalQuantityFromContext = cart?.totalQuantity || 0;
     const totalAmount = cart?.totalAmount || 0;
     const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
+    const distinctProductCount = items.length;
 
     if (items.length === 0 && !loadingCart) {
         return (
@@ -189,7 +190,7 @@ const CartPage = () => {
                     <div className="lg:w-2/3">
                         {items.length > 0 && (
                             <div>
-                                <h2 className="text-2xl font-semibold text-slate-800 mb-6">Chi tiết giỏ hàng ({totalQuantityFromContext} sản phẩm)</h2>
+                                <h2 className="text-2xl font-semibold text-slate-800 mb-6">Chi tiết giỏ hàng ({distinctProductCount} sản phẩm)</h2>
                                 <div className="space-y-5">
                                     {items.map(item => {
                                         const itemIdentifier = isLoggedIn && item.orderItemId ? item.orderItemId : item.productId;
@@ -315,9 +316,13 @@ const CartPage = () => {
                                 <h3 className="text-xl font-semibold text-slate-800 mb-4 pt-4 border-t mt-6">Tóm tắt đơn hàng</h3>
                                 <div className="bg-gray-50 p-4 rounded-lg space-y-3 text-sm border">
                                     <div className="flex justify-between text-slate-600">
-                                        <span>Tạm tính ({totalQuantityFromContext} sản phẩm)</span>
+                                        <span>Tạm tính ({distinctProductCount} sản phẩm)</span>
                                         <span>${totalAmount.toFixed(2)}</span>
                                     </div>
+                                    {/* <div className="flex justify-between text-slate-600">
+                                        <span>Số lượng mua ({totalQuantityFromContext})</span>
+                                        <span>${totalAmount.toFixed(2)}</span>
+                                    </div> */}
                                     <div className="flex justify-between text-slate-600">
                                         <span>Phí vận chuyển</span>
                                         <span>

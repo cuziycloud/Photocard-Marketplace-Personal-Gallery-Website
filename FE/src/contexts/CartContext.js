@@ -149,7 +149,9 @@ export const CartProvider = ({ children }) => {
         }
     }, [isLoggedIn, currentUser, loadingAuth, getGuestCart, syncGuestCartToServer]); 
 
+    
     const addToCart = useCallback(async (product, quantity = 1) => {
+        console.log(product);
         if (!product || !product.id) return false;
         setAddingToCart(prev => ({ ...prev, [product.id]: true }));
         setCartError(null);

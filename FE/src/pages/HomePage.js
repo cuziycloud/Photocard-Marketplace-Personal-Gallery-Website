@@ -33,7 +33,7 @@ const shuffleArray = (array) => {
 const HomePage = () => {
     const { selectedCategory } = useCategory();
     const { searchTerm, sortOption, activeFilters, setSearchTerm, setActiveFilters: contextSetActiveFilters } = useSearchFilter();
-    const { addToCart, addingToCart: cartAddingStatus, cartError: cartContextError } = useCart();
+    const { cart, addToCart, addingToCart: cartAddingStatus, cartError: cartContextError } = useCart();
     const { currentUser, isLoggedIn, loadingAuth } = useAuth();
     const {
         addProductToWishlist,
@@ -241,27 +241,35 @@ const HomePage = () => {
             setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 1000);
             return false;
         }
-        if (product.stockQuantity === 0 && quantity > 0) {
-            setFeedbackMessage({ type: 'error', text: 'Hết hàng!', productId: product.id });
-            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 1000);
+
+        if (quantity <= 0) {
+            setFeedbackMessage({ type: 'error', text: 'Số lượng thêm phải lớn hơn 0.', productId: product.id });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 2000);
             return false;
         }
-        if (product.stockQuantity < quantity) {
-            setFeedbackMessage({ type: 'error', text: `Chỉ còn ${product.stockQuantity} sản phẩm!`, productId: product.id });
-            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 1000);
+
+        if (product.stockQuantity < quantity) { 
+            setFeedbackMessage({
+                type: 'error',
+                text: `Không đủ hàng! Chỉ còn ${product.stockQuantity} sản phẩm. Bạn muốn thêm ${quantity}.`,
+                productId: product.id
+            });
+            setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 3000);
             return false;
         }
+
         const success = await addToCart(product, quantity);
+
         if (success) {
             setFeedbackMessage({ type: 'success', text: 'Đã thêm vào giỏ!', productId: product.id });
-            const newStock = Math.max(0, product.stockQuantity - quantity);
-            updateProductStockAfterCartAction(product.id, newStock);
+            const newStockForDisplay = Math.max(0, product.stockQuantity - quantity);
+            updateProductStockAfterCartAction(product.id, newStockForDisplay);
         } else {
             setFeedbackMessage({ type: 'error', text: cartContextError || 'Lỗi khi thêm vào giỏ!', productId: product.id });
         }
-        setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 1000);
+        setTimeout(() => setFeedbackMessage({ type: '', text: '', productId: null }), 1500);
         return success;
-    }, [addToCart, cartContextError]);
+    }, [addToCart, cartContextError, setAllFetchedProducts, selectedProductForModal, setSelectedProductForModal]); 
 
     const handleOpenProductModal = (product) => {
         setSelectedProductForModal(product);
