@@ -21,7 +21,7 @@ const StickyHeaderLayout = () => {
   
   const pagesWithoutStickyElements = [
     '/wishlist', '/card', '/collection', '/gallery', 
-    '/bubble', '/cart', '/login'
+    '/bubble', '/cart', '/login', '/profile'
   ];
   
   const isHomePage = pathname === '/';

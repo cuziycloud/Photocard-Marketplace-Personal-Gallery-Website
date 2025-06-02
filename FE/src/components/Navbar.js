@@ -98,11 +98,11 @@ const Navbar = () => {
                             <NavLink to="/wishlist" className={navLinkClasses} onClick={closeMobileMenu}>
                                 Wishlist
                             </NavLink>
-                            {isLoggedIn && ( 
+                            {/* {isLoggedIn && ( 
                                 <NavLink to="/myorder" className={navLinkClasses} onClick={closeMobileMenu}>
                                     My Order
                                 </NavLink>
-                            )}
+                            )} */}
                         </div>
                     </div>
 
