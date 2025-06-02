@@ -27,11 +27,17 @@ public class GalleryPostService {
     @Transactional
     public GalleryPost createPost(GalleryPost postDataFromRequest, User authenticatedUser) {
         GalleryPost newPost = new GalleryPost();
+
+        if (authenticatedUser == null || authenticatedUser.getId() == null) {
+            throw new IllegalArgumentException("Authenticated user or user ID cannot be null for creating a gallery post.");
+        }
+        newPost.setUserId(authenticatedUser.getId());
+
         newPost.setImageUrl(postDataFromRequest.getImageUrl());
         newPost.setCaption(postDataFromRequest.getCaption());
-        newPost.setUserId(authenticatedUser.getId());
-        newPost.setPostedByUsername(postDataFromRequest.getPostedByUsername() != null ? postDataFromRequest.getPostedByUsername() : "Duchin");
-        newPost.setPostedByAvatarUrl(postDataFromRequest.getPostedByAvatarUrl() != null ? postDataFromRequest.getPostedByAvatarUrl() : "https://i.pinimg.com/736x/24/eb/1f/24eb1f32e2286d3251a2634adcf60592.jpg");
+
+        newPost.setPostedByUsername(authenticatedUser.getUsername() != null ? authenticatedUser.getUsername() : "Demo User");
+        newPost.setPostedByAvatarUrl(authenticatedUser.getAvatarUrl() != null ? authenticatedUser.getAvatarUrl() : "https://i.pinimg.com/736x/fa/fa/06/fafa063bab258267192f667bb81c3040.jpg");
 
         newPost.setLikesCount(0);
         newPost.setCommentsCount(0);

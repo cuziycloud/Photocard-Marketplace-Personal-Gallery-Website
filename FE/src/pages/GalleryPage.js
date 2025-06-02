@@ -64,65 +64,37 @@ const GalleryPage = () => {
   }, [loadPosts]);
 
   const handleOpenAddModal = () => {
-    if (isLoggedIn && currentUser) { // CHỈ CHO PHÉP MỞ MODAL NẾU ĐÃ ĐĂNG NHẬP
+    if (isLoggedIn && currentUser) { 
       setIsAddModalOpen(true);
     } else {
       alert("Vui lòng đăng nhập để đăng bài.");
-      // Tùy chọn: Điều hướng đến trang đăng nhập
-      // navigate('/login');
     }
   };
   const handleCloseAddModal = () => setIsAddModalOpen(false);
 
   const handleCreatePost = async (postDataFromModal) => {
-    if (!isLoggedIn || !currentUser) { // KIỂM TRA LẠI TRƯỚC KHI SUBMIT
-        alert("Vui lòng đăng nhập để thực hiện hành động này.");
-        handleCloseAddModal();
-        return;
-    }
     try {
       let payload;
-      // Lấy thông tin người đăng từ currentUser
-      const posterUsername = currentUser.username; // Giả sử UserDto có username
-      // Giả sử UserDto của bạn có trường avatarUrl, nếu không, bạn cần một URL mặc định hoặc logic khác
-      const posterAvatar = currentUser.avatarUrl || 'https://i.pinimg.com/736x/fa/fa/06/fafa063bab258267192f667bb81c3040.jpg';
-
       if (postDataFromModal.uploadMethod === 'file' && postDataFromModal.imageFile) {
         payload = new FormData();
         payload.append('caption', postDataFromModal.caption);
         payload.append('imageFile', postDataFromModal.imageFile);
-        // Backend nên tự lấy thông tin người dùng từ Principal (người dùng đã xác thực)
-        // Nếu backend API cho phép truyền (và bạn muốn ghi đè), bạn có thể thêm:
-        // payload.append('postedByUsername', posterUsername);
-        // payload.append('postedByAvatarUrl', posterAvatar);
       } else if (postDataFromModal.uploadMethod === 'link' && postDataFromModal.imageUrl) {
         payload = {
           imageUrl: postDataFromModal.imageUrl,
           caption: postDataFromModal.caption,
-          // postedByUsername: posterUsername, // Tương tự
-          // postedByAvatarUrl: posterAvatar,  // Tương tự
         };
       } else {
         throw new Error("Dữ liệu không hợp lệ để tạo bài đăng.");
       }
-
       const response = await galleryService.createGalleryPost(payload);
       const createdPost = response.data;
 
-      // Để UI hiển thị đúng ngay, cập nhật thông tin người đăng
-      // Nếu backend không trả về thông tin này trong `createdPost`, ta tự gán
-      const displayPost = {
-        ...createdPost,
-        // Ưu tiên thông tin từ server nếu có, nếu không thì lấy từ currentUser
-        postedByUsername: createdPost.postedByUsername || posterUsername,
-        postedByAvatarUrl: createdPost.postedByAvatarUrl || posterAvatar,
-      };
-
-      setPosts(prevPosts => [displayPost, ...prevPosts]);
+      setPosts(prevPosts => [createdPost, ...prevPosts])
       handleCloseAddModal();
     } catch (apiError) {
       console.error("Lỗi khi tạo bài đăng trong GalleryPage:", apiError.response?.data || apiError.message);
-      throw apiError; // Để AddPostModal có thể bắt và hiển thị lỗi
+      throw apiError;
     }
   };
 

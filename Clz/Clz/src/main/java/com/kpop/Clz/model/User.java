@@ -35,6 +35,13 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<Order> orders = new HashSet<>();
 
+    @Column(name = "avatarUrl", length = 500)
+    private String avatarUrl;
+
+    public String getAvatarUrl() {
+        return this.avatarUrl;
+    }
+
     public enum Role {
         customer, admin
     }
