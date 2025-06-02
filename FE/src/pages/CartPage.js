@@ -51,7 +51,7 @@ const CartPage = () => {
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [setCreatedOrderId] = useState(null);
+    const [createdOrderId, setCreatedOrderId] = useState(null);
 
 
     const fetchCartCallback = useCallback(() => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp, FaFilter, FaSearch } from 'react-icons/fa'; // Bỏ FaDollarSign vì formatCurrencyUSD đã có $
+import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp, FaFilter, FaSearch } from 'react-icons/fa'; 
 
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -254,8 +254,7 @@ const MyOrdersPage = () => {
                                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-4">
                                                 <div className="flex-grow">
                                                     <div className="flex items-baseline mb-1">
-                                                        <span className="text-xs font-medium text-gray-500 mr-1.5 uppercase">Mã đơn:</span>
-                                                        <h2 className="text-md sm:text-lg font-semibold text-sky-700">{order.id}</h2>
+                                                        <h2 className="text-md sm:text-lg font-semibold text-sky-700">Mã đơn: {order.orderCode}</h2>
                                                     </div>
                                                     <p className="text-xs sm:text-sm text-gray-500">
                                                         Ngày đặt: {formatDate(order.orderDate)}
@@ -282,7 +281,7 @@ const MyOrdersPage = () => {
                                                             <img
                                                                 src={item.imageUrl || 'https://via.placeholder.com/64?text=N/A'}
                                                                 alt={item.productName || 'Sản phẩm'}
-                                                                className="w-16 h-16 object-contain bg-gray-100 rounded-md border border-gray-200 flex-shrink-0"
+                                                                className="w-14 object-contain bg-gray-100 rounded-md border-2 border-gray-800 flex-shrink-0"
                                                             />
                                                             <div className="flex-grow min-w-0"> 
                                                                 <Link to={`/products/${item.productId}`} className="font-semibold text-gray-800 hover:text-sky-600 transition-colors block truncate" title={item.productName}>

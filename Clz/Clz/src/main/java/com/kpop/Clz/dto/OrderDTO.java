@@ -15,11 +15,13 @@ public class OrderDTO {
     private String shippingAddress;
     private String phoneNumber;
     private List<OrderItemDTO> items;
+    private String orderCode;
 
     public OrderDTO() {}
 
     public OrderDTO(Integer id,
                     LocalDateTime orderDate,
+                    String orderCode,
                     BigDecimal subTotalProducts,
                     BigDecimal shippingFee,
                     BigDecimal grandTotal,
@@ -29,6 +31,7 @@ public class OrderDTO {
                     List<OrderItemDTO> items) {
         this.id = id;
         this.orderDate = orderDate;
+        this.orderCode = orderCode;
         this.subTotalProducts = subTotalProducts;
         this.shippingFee = shippingFee;
         this.grandTotal = grandTotal;
@@ -58,4 +61,6 @@ public class OrderDTO {
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public List<OrderItemDTO> getItems() { return items; }
     public void setItems(List<OrderItemDTO> items) { this.items = items; }
+    public String getOrderCode() { return orderCode; }
+    public void setOrderCode(String orderCode) { this.orderCode = orderCode; }
 }

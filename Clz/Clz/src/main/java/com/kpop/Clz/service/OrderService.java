@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 @Service
 public class OrderService {
@@ -89,6 +91,7 @@ public class OrderService {
         return new OrderDTO(
             order.getId(),
             orderDateTime,
+            order.getOrderCode(),
             order.getTotalAmount(),
             order.getShippingFee(),
             order.getGrandTotal(),
@@ -125,6 +128,8 @@ public class OrderService {
         newOrder.setUser(currentUser);
         newOrder.setShippingAddress(request.getShippingAddress());
         newOrder.setPhoneNumber(request.getPhoneNumber());
+
+        newOrder.setOrderCode(generateOrderCode());
 
         BigDecimal subtotalProducts = BigDecimal.ZERO;
         if (request.getCartItems() == null || request.getCartItems().isEmpty()) {
@@ -191,4 +196,12 @@ public class OrderService {
         return new BigDecimal("10.00");
     }
 
+    private String generateOrderCode() {
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        String randomPart = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        String orderCode = "ORD-" + datePart + "-" + randomPart;
+        return orderCode;
+    }
 }

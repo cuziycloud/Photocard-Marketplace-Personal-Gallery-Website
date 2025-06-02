@@ -53,6 +53,9 @@ public class Order {
     @Column(name = "grand_total", precision = 10, scale = 2)
     private BigDecimal grandTotal = BigDecimal.ZERO;
 
+    @Column(name = "order_code", unique = true, nullable = false, length = 50)
+    private String orderCode;
+
 
     // Set for uncertain order
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
