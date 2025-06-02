@@ -12,6 +12,7 @@ import WishlistPage from './pages/WishlistPage';
 import GalleryPage from './pages/GalleryPage';
 import CartPage from './pages/CartPage';
 import AddProductPage from './pages/admin/AddProductPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import { CategoryProvider } from './contexts/CategoryContext';
 import { SearchFilterProvider } from './contexts/SearchFilterContext';
@@ -39,6 +40,7 @@ function App() {
                 <Routes>
                   <Route element={<LoginLayout />}>
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                   </Route>
                   <Route element={<DefaultLayout><MainLayout /></DefaultLayout>}>
                     <Route path="/" element={<ProductList />} />
