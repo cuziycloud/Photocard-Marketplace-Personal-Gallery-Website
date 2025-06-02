@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class CreateOrderRequestDTO {
-    private List<CartItemDTO> cartItems;
+    private List<CartItemInputDTO> cartItems;
     private String shippingAddress;
     private String selectedProvince;
     private String phoneNumber;
@@ -12,7 +12,7 @@ public class CreateOrderRequestDTO {
 
     public CreateOrderRequestDTO() {}
 
-    public CreateOrderRequestDTO(List<CartItemDTO> cartItems, String shippingAddress, String selectedProvince, String phoneNumber, BigDecimal frontendCalculatedShippingFee) {
+    public CreateOrderRequestDTO(List<CartItemInputDTO> cartItems, String shippingAddress, String selectedProvince, String phoneNumber, BigDecimal frontendCalculatedShippingFee) {
         this.cartItems = cartItems;
         this.shippingAddress = shippingAddress;
         this.selectedProvince = selectedProvince;
@@ -20,11 +20,11 @@ public class CreateOrderRequestDTO {
         this.frontendCalculatedShippingFee = frontendCalculatedShippingFee;
     }
 
-    public List<CartItemDTO> getCartItems() {
+    public List<CartItemInputDTO> getCartItems() {
         return cartItems;
     }
 
-    public void setCartItems(List<CartItemDTO> cartItems) {
+    public void setCartItems(List<CartItemInputDTO> cartItems) {
         this.cartItems = cartItems;
     }
 

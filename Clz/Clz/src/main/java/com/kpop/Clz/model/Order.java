@@ -65,6 +65,7 @@ public class Order {
     private Timestamp updatedAt;
 
     public enum OrderStatus {
+        CART,
         PENDING,
         PAID,
         SHIPPED,

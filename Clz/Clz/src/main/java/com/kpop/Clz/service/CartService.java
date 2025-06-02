@@ -1,6 +1,6 @@
 package com.kpop.Clz.service;
 
-import com.kpop.Clz.dto.AddToCartRequest;
+import com.kpop.Clz.dto.AddItemToCartRequestDTO;
 import com.kpop.Clz.dto.CartDTO;
 import com.kpop.Clz.exception.InsufficientStockException;
 import com.kpop.Clz.exception.ResourceNotFoundException;
@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.Optional;
 
 @Service
@@ -28,7 +27,7 @@ public class CartService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        Optional<Order> pendingOrderOpt = orderRepository.findByUserAndStatus(user, Order.OrderStatus.PENDING);
+        Optional<Order> pendingOrderOpt = orderRepository.findByUserAndStatus(user, Order.OrderStatus.CART);
 
         if (pendingOrderOpt.isPresent()) {
             Order pendingOrder = pendingOrderOpt.get();
@@ -39,7 +38,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartDTO addItemToCart(Integer userId, AddToCartRequest request) {
+    public CartDTO addItemToCart(Integer userId, AddItemToCartRequestDTO request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         Product product = productRepository.findById(request.getProductId())
@@ -49,8 +48,8 @@ public class CartService {
             throw new InsufficientStockException("Product " + product.getName() + " (ID: " + product.getId() + ") does not have enough stock. Requested: " + request.getQuantity() + ", Available: " + product.getStockQuantity());
         }
 
-        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.PENDING)
-                .orElseGet(() -> createNewPendingOrderForUser(user));
+        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.CART)
+                .orElseGet(() -> createNewCartForUser(user));
 
         Optional<OrderItem> existingItemOpt = pendingOrder.getOrderItems().stream()
                 .filter(item -> item.getProduct() != null && item.getProduct().getId().equals(product.getId()))
@@ -78,13 +77,14 @@ public class CartService {
         return new CartDTO(pendingOrder);
     }
 
-    private Order createNewPendingOrderForUser(User user) {
-        Order newOrder = new Order();
-        newOrder.setUser(user);
-        newOrder.setStatus(Order.OrderStatus.PENDING);
-        newOrder.setOrderDate(new Timestamp(System.currentTimeMillis()));
-        newOrder.setTotalAmount(BigDecimal.ZERO);
-        return newOrder;
+    private Order createNewCartForUser(User user) {
+        Order newCart = new Order();
+        newCart.setUser(user);
+        newCart.setStatus(Order.OrderStatus.CART);
+        newCart.setTotalAmount(BigDecimal.ZERO);
+        newCart.setShippingFee(BigDecimal.ZERO);
+        newCart.setGrandTotal(BigDecimal.ZERO);
+        return orderRepository.save(newCart);
     }
 
     private void calculateOrderTotals(Order order) {
@@ -99,6 +99,14 @@ public class CartService {
         order.setTotalAmount(totalAmount);
     }
 
+    @Transactional
+    public void clearCartAfterCheckout(User user) {
+        Optional<Order> cartOrderOpt = orderRepository.findByUserAndStatus(user, Order.OrderStatus.CART);
+        cartOrderOpt.ifPresent(cartOrder -> {
+            orderRepository.delete(cartOrder);
+            System.out.println("CartService: Cart (Order ID: " + cartOrder.getId() + ") cleared for user: " + user.getEmail());
+        });
+    }
 
 
     @Transactional
@@ -112,7 +120,7 @@ public class CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found with id: " + orderItemId));
 
         // 3. Kiểm tra xem OrderItem này có thuộc về giỏ hàng (Order PENDING) của user không
-        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.PENDING)
+        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.CART)
                 .orElseThrow(() -> new ResourceNotFoundException("No pending cart found for user: " + userId));
 
         if (!orderItem.getOrder().getId().equals(pendingOrder.getId())) {
@@ -147,7 +155,7 @@ public class CartService {
         OrderItem orderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found with id: " + orderItemId));
 
-        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.PENDING)
+        Order pendingOrder = orderRepository.findByUserAndStatus(user, Order.OrderStatus.CART)
                 .orElseThrow(() -> new ResourceNotFoundException("No pending cart found for user: " + userId));
 
         if (!orderItem.getOrder().getId().equals(pendingOrder.getId())) {

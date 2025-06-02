@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaTrash, FaSpinner, FaShoppingCart, FaPlus, FaMinus, FaExclamationCircle, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaTrash, FaSpinner, FaShoppingCart, FaPlus, FaMinus, FaExclamationCircle, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa'; // Thêm FaCheckCircle
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -18,17 +18,6 @@ const provinces = [
     { value: 'Khánh Hòa', label: 'Khánh Hòa', region: 'KHAC' },
 ];
 
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        return new Date(dateString).toLocaleDateString('en-US', options);
-    } catch (error) {
-        console.error("Error formatting date:", dateString, error);
-        return dateString;
-    }
-};
-
 const formatCurrencyUSD = (amount) => {
     const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (typeof numericAmount !== 'number' || isNaN(numericAmount)) return 'N/A';
@@ -38,27 +27,6 @@ const formatCurrencyUSD = (amount) => {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(numericAmount);
-};
-
-const getOrderStatusStyle = (status) => {
-    switch (status?.toUpperCase()) {
-        case 'PENDING':
-            return { text: 'Chờ xử lý', textColor: 'text-yellow-700', bgColor: 'bg-yellow-100', borderColor: 'border-yellow-400' };
-        case 'PROCESSING':
-            return { text: 'Đang xử lý', textColor: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-400' };
-        case 'PAID':
-             return { text: 'Đã thanh toán', textColor: 'text-cyan-700', bgColor: 'bg-cyan-100', borderColor: 'border-cyan-400' };
-        case 'SHIPPED':
-            return { text: 'Đã giao hàng', textColor: 'text-teal-700', bgColor: 'bg-teal-100', borderColor: 'border-teal-400' };
-        case 'DELIVERED':
-            return { text: 'Đã nhận hàng', textColor: 'text-green-700', bgColor: 'bg-green-100', borderColor: 'border-green-400' };
-        case 'COMPLETED':
-            return { text: 'Hoàn thành', textColor: 'text-green-800', bgColor: 'bg-green-200', borderColor: 'border-green-500' };
-        case 'CANCELLED':
-            return { text: 'Đã hủy', textColor: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-400' };
-        default:
-            return { text: status || 'Không xác định', textColor: 'text-gray-700', bgColor: 'bg-gray-100', borderColor: 'border-gray-400' };
-    }
 };
 
 const CartPage = () => {
@@ -71,7 +39,7 @@ const CartPage = () => {
         removeItemFromCart,
         updatingItem,
         removingItem,
-        clearCart 
+        clearCart
     } = useCart();
     const { currentUser, isLoggedIn, loadingAuth, getToken } = useAuth();
     const navigate = useNavigate();
@@ -82,11 +50,15 @@ const CartPage = () => {
     const [shippingTime, setShippingTime] = useState('');
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [setCreatedOrderId] = useState(null);
+
 
     const fetchCartCallback = useCallback(() => {
         if (isLoggedIn) {
             fetchCart();
         } else if (!loadingAuth && !isLoggedIn) {
+
         }
     }, [isLoggedIn, loadingAuth, fetchCart]);
 
@@ -100,7 +72,7 @@ const CartPage = () => {
         const newQuantity = item.quantity + change;
         if (newQuantity < 1) return;
         const currentStock = item.stockQuantity;
-        if (newQuantity > currentStock) {
+        if (currentStock !== undefined && newQuantity > currentStock) {
             alert(`Số lượng "${item.productName}" yêu cầu (${newQuantity}) vượt quá tồn kho (${currentStock}).`);
             return;
         }
@@ -117,13 +89,13 @@ const CartPage = () => {
         if (!cart?.items || cart.items.length === 0) {
             setCalculatedShippingFee(0);
             setShippingTime('');
-            return { fee: 0, time: '' };
+            return;
         }
         const provinceData = provinces.find(p => p.value === provinceValue);
         if (!provinceData) {
             setCalculatedShippingFee(0);
             setShippingTime('Vui lòng chọn tỉnh/thành');
-            return { fee: 0, time: 'Vui lòng chọn tỉnh/thành' };
+            return;
         }
         let fee = 0;
         let time = '';
@@ -201,28 +173,37 @@ const CartPage = () => {
                 body: JSON.stringify(orderPayload),
             });
 
+            const responseText = await response.text();
+
             if (!response.ok) {
                 let errorMessage = `Lỗi ${response.status} khi tạo đơn hàng.`;
+                console.error(`Error creating order. Status: ${response.status}. Response body:`, responseText);
                 try {
-                    const errorData = await response.json();
+                    const errorData = JSON.parse(responseText);
                     errorMessage = errorData.message || errorData.error || errorMessage;
                 } catch (parseError) {
-                    const errorText = await response.text();
-                    console.error("Raw error response from create order:", errorText);
+                    if (response.status === 403) {
+                        errorMessage = "Bạn không có quyền thực hiện hành động này (403).";
+                    } else if (responseText && responseText.length < 500 && (responseText.toLowerCase().includes('error') || responseText.toLowerCase().includes('exception'))) {
+                        errorMessage = `Lỗi server (${response.status}). Chi tiết: ${responseText.substring(0,100)}...`;
+                    }
                 }
                 throw new Error(errorMessage);
             }
 
-            const createdOrderData = await response.json();
-            alert(`Đơn hàng #${createdOrderData.id || 'mới'} đã được tạo thành công!`);
+            const createdOrderData = JSON.parse(responseText);
             console.log("Order created successfully:", createdOrderData);
 
+            const orderId = createdOrderData.id || (createdOrderData.order && createdOrderData.order.id) || 'N/A';
+            setCreatedOrderId(orderId);
+            setShowSuccessModal(true); 
+
             if (typeof clearCart === 'function') {
-                await clearCart();
+                await clearCart(); 
             } else {
-                fetchCart();
+                fetchCart(); 
             }
-            navigate(`/my-orders`);
+
         } catch (error) {
             console.error("Failed to create order:", error);
             setCheckoutError(error.message || "Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.");
@@ -231,7 +212,7 @@ const CartPage = () => {
         }
     };
 
-    if (loadingAuth || (loadingCart && (!cart || cart.items.length === 0) && !cartError)) {
+    if (loadingAuth || loadingCart) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen py-24 bg-gray-50">
                 <FaSpinner className="animate-spin text-5xl text-indigo-500 mb-4" />
@@ -240,7 +221,7 @@ const CartPage = () => {
         );
     }
 
-    if (cartError && !loadingCart) {
+    if (cartError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen text-center px-4 bg-gray-50">
                 <FaExclamationCircle className="text-6xl text-red-400 mb-4" />
@@ -252,11 +233,11 @@ const CartPage = () => {
     }
 
     const items = cart?.items || [];
-    const totalAmount = cart?.totalAmount || 0;
+    const totalAmount = parseFloat(cart?.totalAmount || 0);
     const finalTotalToDisplay = totalAmount + (items.length > 0 ? calculatedShippingFee : 0);
     const distinctProductCount = items.length;
 
-    if (items.length === 0 && !loadingCart && !cartError) {
+    if (items.length === 0 && !loadingCart && !cartError && !showSuccessModal) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen text-center py-24 bg-gray-50">
                 <FaShoppingCart className="text-6xl text-gray-300 mb-4" />
@@ -269,6 +250,37 @@ const CartPage = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl text-center max-w-md w-full">
+                        <FaCheckCircle className="text-5xl sm:text-6xl text-green-500 mx-auto mb-4 sm:mb-6" />
+                        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Đặt hàng thành công!</h2>
+                        <p className="text-slate-600 mb-3 sm:mb-4">
+                            Đơn hàng của bạn đã được tiếp nhận.
+                        </p>
+                        <p className="text-sm text-slate-500 mb-6 sm:mb-8">
+                            Cảm ơn bạn đã mua sắm! Bạn có thể theo dõi đơn hàng hoặc tiếp tục khám phá sản phẩm.
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                            <Link
+                                to="/"
+                                onClick={() => setShowSuccessModal(false)}
+                                className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-lg font-medium transition-colors"
+                            >
+                                Về Trang Chủ
+                            </Link>
+                            <Link
+                                to="/myorder"
+                                onClick={() => setShowSuccessModal(false)}
+                                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+                            >
+                                Xem Đơn Hàng
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto">
                 <div className="mb-10 text-center">
                     <h1 className="text-4xl font-extrabold text-slate-900">Giỏ hàng & Thanh toán</h1>
@@ -276,7 +288,7 @@ const CartPage = () => {
 
                 <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
                     <div className="lg:w-2/3">
-                        {items.length > 0 && (
+                        {items.length > 0 ? ( 
                             <div>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-6">Chi tiết giỏ hàng ({distinctProductCount} sản phẩm)</h2>
                                 <div className="space-y-5">
@@ -347,9 +359,14 @@ const CartPage = () => {
                                     })}
                                 </div>
                             </div>
+                        ) : (
+                            showSuccessModal && (
+                                <div className="text-center py-10">
+                                    <p className="text-slate-600">Đơn hàng đã được gửi. Giỏ hàng của bạn hiện trống.</p>
+                                </div>
+                            )
                         )}
                     </div>
-
                     <div className="lg:w-1/3">
                         <div className="bg-white p-6 rounded-xl shadow-lg lg:sticky lg:top-24 space-y-6">
                             <div>
@@ -365,7 +382,7 @@ const CartPage = () => {
                                             value={selectedProvince}
                                             onChange={(e) => setSelectedProvince(e.target.value)}
                                             className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                            disabled={items.length === 0}
+                                            disabled={items.length === 0 || isSubmittingOrder || showSuccessModal}
                                         >
                                             <option value="">-- Chọn Tỉnh/Thành phố --</option>
                                             {provinces.map(province => (
@@ -387,7 +404,7 @@ const CartPage = () => {
                                             onChange={(e) => setShippingAddress(e.target.value)}
                                             placeholder="Ví dụ: 123 Đường ABC, Phường XYZ, Quận GHI"
                                             className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                            disabled={items.length === 0}
+                                            disabled={items.length === 0 || isSubmittingOrder || showSuccessModal}
                                         />
                                     </div>
                                     {selectedProvince && shippingTime && items.length > 0 && (
@@ -425,7 +442,7 @@ const CartPage = () => {
                                 )}
                                 <button
                                     onClick={handleProceedToCheckout}
-                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince) || isSubmittingOrder}
+                                    disabled={items.length === 0 || !selectedProvince || !shippingAddress.trim() || (calculatedShippingFee === 0 && shippingTime === 'Không hỗ trợ vận chuyển' && selectedProvince) || isSubmittingOrder || showSuccessModal}
                                     className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 transition-all text-center font-semibold text-base disabled:opacity-50 flex items-center justify-center"
                                 >
                                     {isSubmittingOrder ? (

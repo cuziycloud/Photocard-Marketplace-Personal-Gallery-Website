@@ -66,9 +66,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/groups/**").permitAll()
                         .requestMatchers("/api/gallery-posts/**").permitAll()
-                        .requestMatchers("/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/groups/**"
-                        ).permitAll()
+                        .requestMatchers("/api/users/{userId}/cart/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/orders/create").authenticated()
+                        .requestMatchers("/api/orders/my-orders").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

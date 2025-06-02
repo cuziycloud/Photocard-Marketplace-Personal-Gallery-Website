@@ -1,9 +1,11 @@
 package com.kpop.Clz.service;
 
-import com.kpop.Clz.dto.CartItemDTO;
+import com.kpop.Clz.dto.CartItemInputDTO;
 import com.kpop.Clz.dto.CreateOrderRequestDTO;
 import com.kpop.Clz.dto.OrderDTO;
 import com.kpop.Clz.dto.OrderItemDTO;
+import com.kpop.Clz.exception.InsufficientStockException;
+import com.kpop.Clz.exception.ResourceNotFoundException;
 import com.kpop.Clz.model.Order;
 import com.kpop.Clz.model.OrderItem;
 import com.kpop.Clz.model.Product;
@@ -76,7 +78,7 @@ public class OrderService {
         }
     }
 
-    private OrderDTO convertToOrderDTO(Order order) {
+    public OrderDTO convertToOrderDTO(Order order) {
         List<OrderItemDTO> itemDTOs = order.getOrderItems().stream()
                 .map(this::convertToOrderItemDTO)
                 .collect(Collectors.toList());
@@ -112,39 +114,71 @@ public class OrderService {
         );
     }
 
+    @Autowired
+    private CartService cartService; // Inject CartService
+
     @Transactional
     public Order createOrder(CreateOrderRequestDTO request, User currentUser) {
+        System.out.println("OrderService: Entering createOrder for user: " + currentUser.getEmail());
+
         Order newOrder = new Order();
         newOrder.setUser(currentUser);
         newOrder.setShippingAddress(request.getShippingAddress());
         newOrder.setPhoneNumber(request.getPhoneNumber());
 
         BigDecimal subtotalProducts = BigDecimal.ZERO;
-        for (CartItemDTO itemInput : request.getCartItems()) {
+        if (request.getCartItems() == null || request.getCartItems().isEmpty()) {
+            throw new IllegalArgumentException("Order must contain at least one item.");
+        }
+
+        for (CartItemInputDTO itemInput : request.getCartItems()) {
             Product product = productRepository.findById(itemInput.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
-            // Kiểm tra tồn kho ở đây
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemInput.getProductId()));
+
             if (product.getStockQuantity() < itemInput.getQuantity()) {
-                throw new RuntimeException("Not enough stock for product: " + product.getName());
+                throw new InsufficientStockException("Not enough stock for product: " + product.getName() +
+                        ". Requested: " + itemInput.getQuantity() + ", Available: " + product.getStockQuantity());
             }
 
             OrderItem orderItem = new OrderItem();
             orderItem.setProduct(product);
             orderItem.setQuantity(itemInput.getQuantity());
             orderItem.setUnitPrice(product.getPrice());
-            newOrder.addOrderItem(orderItem);
-            subtotalProducts = subtotalProducts.add(product.getPrice().multiply(new BigDecimal(itemInput.getQuantity())));
+            orderItem.setOrder(newOrder);
+            newOrder.getOrderItems().add(orderItem);
 
+
+            subtotalProducts = subtotalProducts.add(
+                    product.getPrice().multiply(new BigDecimal(itemInput.getQuantity()))
+            );
+
+            product.setStockQuantity(product.getStockQuantity() - itemInput.getQuantity());
+            productRepository.save(product);
         }
         newOrder.setTotalAmount(subtotalProducts);
 
-        BigDecimal actualShippingFee = calculateShippingFeeOnBackend(request.getSelectedProvince(), (Set<OrderItem>) newOrder.getOrderItems());
+        BigDecimal actualShippingFee = calculateShippingFeeOnBackend(request.getSelectedProvince(), newOrder.getOrderItems());
         newOrder.setShippingFee(actualShippingFee);
 
-        newOrder.setGrandTotal(subtotalProducts.add(actualShippingFee));
+        newOrder.setGrandTotal(subtotalProducts.add(actualShippingFee)); // Tổng cuối cùng
         newOrder.setStatus(Order.OrderStatus.PENDING);
 
-        return orderRepository.save(newOrder);
+        Order savedOrder = orderRepository.save(newOrder);
+        System.out.println("OrderService: Actual Order created successfully with ID: " + savedOrder.getId());
+
+        cartService.clearCartAfterCheckout(currentUser);
+        System.out.println("OrderService: Cart (Order with CART status) cleared for user after order creation.");
+
+        return savedOrder;
+    }
+
+    private BigDecimal calculateShippingFeeOnBackend(String province, List<OrderItem> items) {
+        if (province == null || province.isEmpty()) return BigDecimal.ZERO;
+        if (province.equals("TP. Hồ Chí Minh")) return new BigDecimal("5.00");
+        if (Arrays.asList("Đồng Nai", "Bình Dương", "Bà Rịa - Vũng Tàu", "Long An", "Tiền Giang", "Cần Thơ").contains(province)) {
+            return new BigDecimal("7.00");
+        }
+        return new BigDecimal("10.00");
     }
 
     private BigDecimal calculateShippingFeeOnBackend(String province, Set<OrderItem> items) {

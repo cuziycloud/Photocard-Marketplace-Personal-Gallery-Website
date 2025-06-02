@@ -20,4 +20,20 @@ public class UserService {
     public Optional<User> findByUsername(String email) {
         return userRepository.findByEmail(email);
     }
+
+    public Optional<User> getUserByUsernameOrEmail(String identifier) {
+        Optional<User> user = userRepository.findByUsername(identifier);
+        if (user.isPresent()) {
+            return user;
+        }
+        return userRepository.findByEmail(identifier);
+    }
+
+    public Optional<User> getUserByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 }
