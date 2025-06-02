@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaSignOutAlt, FaCog } from 'react-icons/fa';
+import { FaUserCircle, FaSignOutAlt, FaBoxOpen } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 
 const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} }) => {
@@ -27,12 +27,11 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
         }
     };
 
-    const handleMenuClick = (action) => {
+    const handleMenuClick = () => {
         setIsOpen(false);
         if (mobileContext && typeof closeMobileMenu === 'function') {
             closeMobileMenu();
         }
-        if (action) action();
     };
 
     useEffect(() => {
@@ -71,7 +70,7 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
             >
                 <FaUserCircle className="h-8 w-8" />
                 {mobileContext && (
-                    <span className="ml-3 text-base font-medium truncate max-w-[120px] ${textColorPrimary}">
+                    <span className={`ml-3 text-base font-medium truncate max-w-[120px] ${textColorPrimary}`}>
                         {currentUser.username || 'Account'}
                     </span>
                 )}
@@ -79,11 +78,7 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
 
             {isOpen && (
                 <div
-                    className={`absolute ${
-                        mobileContext ? 'left-0' : 'right-0'
-                    } mt-3 w-60 rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 ${dropdownBgClass} z-50 transform transition-all duration-300 ease-in-out ${
-                        isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-                    }`}
+                    className={`absolute ${mobileContext ? 'left-0' : 'right-0'} mt-3 w-60 rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 ${dropdownBgClass} z-50 transform transition-all duration-300 ease-in-out`}
                     role="menu"
                     aria-orientation="vertical"
                 >
@@ -91,22 +86,32 @@ const UserMenu = ({ isDark, mobileContext = false, closeMobileMenu = () => {} })
                         <div className={`px-5 py-4 border-b ${dropdownBorderClass}`}>
                             <div className="flex items-center gap-x-2">
                                 <p className={`text-sm font-medium ${textColorSecondary}`}>
-                                Signed in as:
+                                    Signed in as:
                                 </p>
                                 <p className={`text-sm font-semibold truncate ${textColorPrimary}`}>
-                                {currentUser.username || currentUser.email}
+                                    {currentUser.username || currentUser.email}
                                 </p>
                             </div>
                         </div>
 
                         <Link
                             to="/profile"
-                            onClick={() => handleMenuClick(() => navigate('/profile'))}
+                            onClick={handleMenuClick}
                             className={`flex items-center px-5 py-3 text-sm font-medium w-full ${dropdownTextClass} transition duration-150 ease-in-out rounded-md mx-2 mt-2`}
                             role="menuitem"
                         >
-                            <FaCog className="mr-3 h-5 w-5" />
+                            <FaUserCircle className="mr-3 h-5 w-5" />
                             Profile
+                        </Link>
+
+                        <Link
+                            to="/myorder"
+                            onClick={handleMenuClick}
+                            className={`flex items-center px-5 py-3 text-sm font-medium w-full ${dropdownTextClass} transition duration-150 ease-in-out rounded-md mx-2`}
+                            role="menuitem"
+                        >
+                            <FaBoxOpen className="mr-3 h-5 w-5" />
+                            My Orders
                         </Link>
 
                         <button

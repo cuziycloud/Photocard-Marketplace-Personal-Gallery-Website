@@ -21,6 +21,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
 import ProfilePage from './pages/ProfilePage';
+import MyOrdersPage from './pages/MyOrdersPage';
 
 const DefaultLayout = ({ children }) => (
   <div className="bg-white dark:bg-gray-800 App flex flex-col min-h-screen">
@@ -53,6 +54,7 @@ function App() {
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/myorder" element={<MyOrdersPage />} />
                     <Route path="/admin/add-product" element={<AddProductPage />} />
                   </Route>
                 </Routes>
