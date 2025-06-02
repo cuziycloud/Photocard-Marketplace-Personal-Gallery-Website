@@ -1,241 +1,310 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; 
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaBoxOpen, FaInfoCircle, FaRedo, FaShoppingBag, FaChevronDown, FaChevronUp, FaFilter, FaSearch, FaDollarSign } from 'react-icons/fa';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
         const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        return new Date(dateString).toLocaleDateString('vi-VN', options);
+        return new Date(dateString).toLocaleDateString('en-US', options);
     } catch (error) {
+        console.error("Error formatting date:", dateString, error);
         return dateString;
     }
 };
 
-const formatCurrency = (amount) => {
-    if (typeof amount !== 'number') return 'N/A';
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+const formatCurrencyUSD = (amount) => {
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (typeof numericAmount !== 'number' || isNaN(numericAmount)) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2  
+    }).format(numericAmount);
 };
+
 
 const getOrderStatusStyle = (status) => {
     switch (status?.toUpperCase()) {
         case 'PENDING':
-            return { text: 'Chờ xử lý', textColor: 'text-yellow-700', bgColor: 'bg-yellow-100', borderColor: 'border-yellow-500' };
+            return { text: 'Chờ xử lý', textColor: 'text-yellow-700', bgColor: 'bg-yellow-100', borderColor: 'border-yellow-400' };
         case 'PROCESSING':
-            return { text: 'Đang xử lý', textColor: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-500' };
+            return { text: 'Đang xử lý', textColor: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-400' };
+        case 'PAID':
+             return { text: 'Đã thanh toán', textColor: 'text-cyan-700', bgColor: 'bg-cyan-100', borderColor: 'border-cyan-400' };
         case 'SHIPPED':
-            return { text: 'Đã giao hàng', textColor: 'text-teal-700', bgColor: 'bg-teal-100', borderColor: 'border-teal-500' };
+            return { text: 'Đã giao hàng', textColor: 'text-teal-700', bgColor: 'bg-teal-100', borderColor: 'border-teal-400' };
         case 'DELIVERED':
-            return { text: 'Đã nhận hàng', textColor: 'text-green-700', bgColor: 'bg-green-100', borderColor: 'border-green-500' };
+            return { text: 'Đã nhận hàng', textColor: 'text-green-700', bgColor: 'bg-green-100', borderColor: 'border-green-400' };
         case 'COMPLETED':
-            return { text: 'Hoàn thành', textColor: 'text-green-800', bgColor: 'bg-green-200', borderColor: 'border-green-600' };
+            return { text: 'Hoàn thành', textColor: 'text-green-800', bgColor: 'bg-green-200', borderColor: 'border-green-500' };
         case 'CANCELLED':
-            return { text: 'Đã hủy', textColor: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-500' };
+            return { text: 'Đã hủy', textColor: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-400' };
         default:
-            return { text: status || 'Không xác định', textColor: 'text-gray-700', bgColor: 'bg-gray-100', borderColor: 'border-gray-500' };
+            return { text: status || 'Không xác định', textColor: 'text-gray-700', bgColor: 'bg-gray-100', borderColor: 'border-gray-400' };
     }
 };
 
-
 const MyOrdersPage = () => {
-    const { currentUser, getToken } = useAuth();
-    const [orders, setOrders] = useState([]);
+    const { currentUser, getToken, loadingAuth } = useAuth(); 
+    const [allOrders, setAllOrders] = useState([]);
+    const [filteredOrders, setFilteredOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
-    const fetchOrders = async () => {
-        if (!currentUser) return;
+    const [statusFilter, setStatusFilter] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const fetchOrders = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            const mockOrders = [
-                {
-                    id: 'ORD001', orderDate: '2025-05-20T10:30:00Z', totalAmount: 1250000, status: 'DELIVERED',
-                    shippingAddress: '123 Đường ABC, Phường X, Quận Y, TP.HCM', phoneNumber: '090xxxxxxx',
-                    items: [
-                        { id: 1, productId: 'P001', productName: 'Album Kpop Vol.1', quantity: 1, unitPrice: 550000, imageUrl: 'https://via.placeholder.com/80?text=Album1' },
-                        { id: 2, productId: 'P002', productName: 'Lightstick XYZ', quantity: 1, unitPrice: 700000, imageUrl: 'https://via.placeholder.com/80?text=Lightstick' },
-                    ]
+            const token = await getToken();
+            if (!token) {
+                throw new Error("Không thể lấy token xác thực. Vui lòng đăng nhập lại.");
+            }
+
+            const response = await fetch('/api/orders/my-orders', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
                 },
-                {
-                    id: 'ORD002', orderDate: '2025-06-01T14:00:00Z', totalAmount: 780000, status: 'SHIPPED',
-                     shippingAddress: '456 Đường DEF, Phường A, Quận B, TP. Hà Nội', phoneNumber: '091xxxxxxx',
-                    items: [
-                        { id: 3, productId: 'P003', productName: 'Photocard Set (Random)', quantity: 2, unitPrice: 390000, imageUrl: 'https://via.placeholder.com/80?text=Photocard' },
-                    ]
-                },
-                {
-                    id: 'ORD003', orderDate: '2025-06-02T09:15:00Z', totalAmount: 350000, status: 'PENDING',
-                     shippingAddress: '789 Đường GHI, Phường C, Quận D, TP. Đà Nẵng', phoneNumber: '098xxxxxxx',
-                    items: [
-                        { id: 4, productId: 'P004', productName: 'Poster Idol ABC', quantity: 1, unitPrice: 350000, imageUrl: 'https://via.placeholder.com/80?text=Poster' },
-                    ]
-                },
-                 {
-                    id: 'ORD004', orderDate: '2025-04-10T11:20:00Z', totalAmount: 620000, status: 'CANCELLED',
-                     shippingAddress: '111 Đường KLM, Phường E, Quận F, TP. Cần Thơ', phoneNumber: '097xxxxxxx',
-                    items: [
-                        { id: 5, productId: 'P005', productName: 'Special Keychain', quantity: 2, unitPrice: 310000, imageUrl: 'https://via.placeholder.com/80?text=Keychain' },
-                    ]
+            });
+            
+            if (response.status === 204) {
+                setAllOrders([]);
+                setFilteredOrders([]);
+                return; 
+            }
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                     throw new Error('Phiên đăng nhập hết hạn hoặc không có quyền. Vui lòng đăng nhập lại.');
                 }
-            ];
-            setOrders(mockOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate)));
+                let errorMessage = `Lỗi ${response.status}: Không thể tải đơn hàng.`;
+                try {
+                    const errData = await response.json();
+                    errorMessage = errData.message || errorMessage;
+                } catch (parseError) { 
+
+                }
+                throw new Error(errorMessage);
+            }
+            
+            const data = await response.json();
+            const ordersData = data || [];
+            const sortedOrders = ordersData.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+            setAllOrders(sortedOrders);
+            setFilteredOrders(sortedOrders);
         } catch (err) {
-            setError(err.message || 'Đã xảy ra lỗi khi tải đơn hàng.');
+            setError(err.message || 'Đã xảy ra lỗi không mong muốn khi tải đơn hàng.');
             console.error("Fetch orders error:", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [getToken]); 
+
+    useEffect(() => {
+        if (loadingAuth) { 
+            return;
+        }
+        if (!currentUser) { 
+            setLoading(false);
+            setError("Bạn cần đăng nhập để xem đơn hàng.");
+            return;
+        }
+        fetchOrders();
+    }, [currentUser, loadingAuth, fetchOrders]); 
 
 
     useEffect(() => {
-        fetchOrders();
-    }, [currentUser]);
+        let tempOrders = [...allOrders];
+        if (statusFilter) {
+            tempOrders = tempOrders.filter(order => order.status?.toUpperCase() === statusFilter.toUpperCase());
+        }
+        if (searchTerm) {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            tempOrders = tempOrders.filter(order =>
+                order.id.toString().toLowerCase().includes(lowerSearchTerm) ||
+                (order.items && order.items.some(item => item.productName?.toLowerCase().includes(lowerSearchTerm)))
+            );
+        }
+        setFilteredOrders(tempOrders);
+    }, [statusFilter, searchTerm, allOrders]);
 
     const toggleOrderDetails = (orderId) => {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-                <FaRedo className="text-4xl text-sky-600 animate-spin mb-4" />
-                <p className="text-lg text-gray-700">Đang tải danh sách đơn hàng...</p>
-            </div>
-        );
-    }
+    if (loading) {}
     if (error) {}
-    if (orders.length === 0 && !loading) {}
-
+    if (allOrders.length === 0 && !loading) {}
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-sky-50 via-slate-50 to-stone-50 py-10 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-5xl mx-auto"> 
-                <div className="text-center mb-10">
-                    <h1 className="text-4xl font-bold text-gray-800 tracking-tight">
-                        <FaBoxOpen className="text-5xl text-sky-600 mx-auto mb-3" /> Đơn Hàng Của Bạn
-                    </h1>
-                </div>
+        <div className="min-h-screen bg-slate-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-5xl mx-auto">
+                <header className="mb-10 md:mb-12">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+                        <div className="flex items-center gap-3">
+                            <FaBoxOpen className="text-4xl sm:text-5xl text-sky-600" />
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">
+                                Đơn Hàng Của Bạn
+                            </h1>
+                        </div>
+                        {allOrders.length > 0 && (
+                            <p className="text-md sm:text-lg text-gray-500">
+                                Bạn có tổng cộng {allOrders.length} đơn hàng.
+                            </p>
+                        )}
+                    </div>
+                </header>
                 
-                <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <select className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-sky-500 focus:border-sky-500">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="PENDING">Chờ xử lý</option>
-                        <option value="SHIPPED">Đã giao</option>
-                        <option value="DELIVERED">Đã nhận</option>
-                        <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                    <input type="text" placeholder="Tìm kiếm đơn hàng (theo ID, sản phẩm...)" className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-sky-500 focus:border-sky-500 w-full sm:w-auto"/>
-                </div>
-               
-
-                <div className="space-y-6">
-                    {orders.map((order) => {
-                        const statusStyle = getOrderStatusStyle(order.status);
-                        const isExpanded = expandedOrderId === order.id;
-                        return (
-                            <div key={order.id} className="bg-white shadow-xl rounded-xl transition-all duration-300 ease-in-out overflow-hidden">
-                                {/* Order Summary - Clickable Area */}
-                                <div
-                                    className="p-6 hover:bg-slate-50 cursor-pointer border-b border-gray-200"
-                                    onClick={() => toggleOrderDetails(order.id)}
+                {allOrders.length > 0 && (
+                    <section className="mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-center">
+                            <div className="relative">
+                                <FaFilter className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 appearance-none text-gray-700"
+                                    aria-label="Lọc theo trạng thái"
                                 >
-                                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                                        <div className="flex-grow">
-                                            <div className="flex items-center mb-1">
-                                                <span className="text-sm font-medium text-gray-500 mr-2">Mã đơn:</span>
-                                                <span className="text-lg font-semibold text-sky-700">{order.id}</span>
-                                            </div>
-                                            <p className="text-sm text-gray-500">
-                                                Ngày đặt: {formatDate(order.orderDate)}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col items-start md:items-end gap-1 md:gap-2">
-                                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${statusStyle.bgColor} ${statusStyle.textColor} border ${statusStyle.borderColor}`}>
-                                                {statusStyle.text.toUpperCase()}
-                                            </span>
-                                            <p className="text-xl font-bold text-gray-800">{formatCurrency(order.totalAmount)}</p>
-                                        </div>
-                                        <button 
-                                            aria-label={isExpanded ? "Thu gọn" : "Xem chi tiết"}
-                                            className="p-2 text-gray-500 hover:text-sky-600 md:ml-4"
-                                        >
-                                            {isExpanded ? <FaChevronUp size={18} /> : <FaChevronDown size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Order Details - Conditional Rendering */}
-                                {isExpanded && (
-                                    <div className="p-6 bg-slate-50/70 border-t border-gray-200">
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-4">Chi tiết đơn hàng</h3>
-                                        
-                                        {/* Items List */}
-                                        <div className="space-y-4 mb-6">
-                                            {order.items.map((item) => (
-                                                <div key={item.id} className="flex items-center space-x-4 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-                                                    <img
-                                                        src={item.imageUrl || 'https://via.placeholder.com/64?text=N/A'}
-                                                        alt={item.productName}
-                                                        className="w-16 h-16 object-cover rounded-md border border-gray-200"
-                                                    />
-                                                    <div className="flex-grow">
-                                                        <Link to={`/product/${item.productId}`} className="font-semibold text-gray-800 hover:text-sky-600 transition-colors">
-                                                            {item.productName}
-                                                        </Link>
-                                                        <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
-                                                        <p className="text-sm text-gray-500">Đơn giá: {formatCurrency(item.unitPrice)}</p>
-                                                    </div>
-                                                    <p className="text-md font-semibold text-gray-700">{formatCurrency(item.quantity * item.unitPrice)}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Shipping Info */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
-                                            <div>
-                                                <h4 className="text-sm font-semibold text-gray-600 mb-1">Địa chỉ giao hàng:</h4>
-                                                <p className="text-sm text-gray-800">{order.shippingAddress || 'Chưa có thông tin'}</p>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-semibold text-gray-600 mb-1">Số điện thoại:</h4>
-                                                <p className="text-sm text-gray-800">{order.phoneNumber || 'Chưa có thông tin'}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Order Actions (Example) */}
-                                        <div className="mt-6 flex justify-end space-x-3">
-                                            {order.status?.toUpperCase() === 'PENDING' && (
-                                                <button
-                                                    className="px-5 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors shadow-sm"
-                                                >
-                                                    Hủy đơn
-                                                </button>
-                                            )}
-                                            {(order.status?.toUpperCase() === 'DELIVERED' || order.status?.toUpperCase() === 'COMPLETED') && (
-                                                <button
-                                                    className="px-5 py-2 text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 rounded-lg transition-colors shadow-sm"
-                                                >
-                                                    Mua lại
-                                                </button>
-                                            )}
-                                             <Link 
-                                                to={`/order-tracking/${order.id}`} 
-                                                className="px-5 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors shadow-sm"
-                                            >
-                                                Theo dõi đơn hàng
-                                            </Link>
-                                        </div>
-                                    </div>
-                                )}
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="PENDING">Chờ xử lý</option>
+                                    <option value="PAID">Đã thanh toán</option>
+                                    <option value="PROCESSING">Đang xử lý</option>
+                                    <option value="SHIPPED">Đã giao</option>
+                                    <option value="DELIVERED">Đã nhận</option>
+                                    <option value="COMPLETED">Hoàn thành</option>
+                                    <option value="CANCELLED">Đã hủy</option>
+                                </select>
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="relative">
+                                <FaSearch className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Tìm mã đơn, tên sản phẩm..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-gray-700"
+                                    aria-label="Tìm kiếm đơn hàng"
+                                />
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                <main>
+                    {filteredOrders.length > 0 ? (
+                        <div className="space-y-6">
+                            {filteredOrders.map((order) => {
+                                const statusStyle = getOrderStatusStyle(order.status);
+                                const isExpanded = expandedOrderId === order.id;
+                                return (
+                                    <article key={order.id} className="bg-white shadow-xl rounded-xl transition-all duration-300 ease-in-out overflow-hidden hover:shadow-2xl">
+                                        <header
+                                            className="p-5 sm:p-6 hover:bg-slate-50 cursor-pointer border-b border-gray-200"
+                                            onClick={() => toggleOrderDetails(order.id)}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyPress={(e) => e.key === 'Enter' && toggleOrderDetails(order.id)}
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`order-details-${order.id}`}
+                                        >
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-4">
+                                                <div className="flex-grow">
+                                                    <div className="flex items-baseline mb-1">
+                                                        <span className="text-xs font-medium text-gray-500 mr-1.5 uppercase">Mã đơn:</span>
+                                                        <h2 className="text-md sm:text-lg font-semibold text-sky-700">{order.id}</h2>
+                                                    </div>
+                                                    <p className="text-xs sm:text-sm text-gray-500">
+                                                        Ngày đặt: {formatDate(order.orderDate)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col items-start sm:items-end gap-1 text-right">
+                                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${statusStyle.bgColor} ${statusStyle.textColor} border ${statusStyle.borderColor}`}>
+                                                        {statusStyle.text.toUpperCase()}
+                                                    </span>
+                                                    <p className="text-lg sm:text-xl font-bold text-gray-800">{formatCurrencyUSD(order.totalAmount)}</p>
+                                                </div>
+                                                <div className="p-1 text-gray-500 hover:text-sky-600 sm:ml-2 self-center sm:self-auto">
+                                                    {isExpanded ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
+                                                </div>
+                                            </div>
+                                        </header>
+
+                                        {isExpanded && (
+                                            <section id={`order-details-${order.id}`} className="p-5 sm:p-6 bg-slate-50/70 border-t border-gray-200">
+                                                <h3 className="text-md sm:text-lg font-semibold text-gray-700 mb-4">Chi tiết đơn hàng</h3>
+                                                <div className="space-y-4 mb-6">
+                                                    {order.items && order.items.map((item, index) => ( 
+                                                        <div key={item.productId + '-' + index} className="flex items-start sm:items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                                            <img
+                                                                src={item.imageUrl || 'https://via.placeholder.com/64?text=N/A'}
+                                                                alt={item.productName || 'Sản phẩm'}
+                                                                className="w-16 object-cover rounded-md border border-gray-200 flex-shrink-0"
+                                                            />
+                                                            <div className="flex-grow min-w-0"> 
+                                                                <Link to={`/products/${item.productId}`} className="font-semibold text-gray-800 hover:text-sky-600 transition-colors block truncate" title={item.productName}>
+                                                                    {item.productName || 'Tên sản phẩm không có'}
+                                                                </Link>
+                                                                <p className="text-xs sm:text-sm text-gray-500">Số lượng: {item.quantity}</p>
+                                                                <p className="text-xs sm:text-sm text-gray-500">Đơn giá: {formatCurrencyUSD(item.unitPrice)}</p>
+                                                            </div>
+                                                            <p className="text-sm sm:text-md font-semibold text-gray-700 flex-shrink-0 ml-auto">
+                                                                {formatCurrencyUSD(item.quantity * (typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : item.unitPrice))}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                                                    <div>
+                                                        <h4 className="text-sm font-semibold text-gray-600 mb-1">Địa chỉ giao hàng:</h4>
+                                                        <p className="text-sm text-gray-800">{order.shippingAddress || 'Chưa có thông tin'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-semibold text-gray-600 mb-1">Số điện thoại:</h4>
+                                                        <p className="text-sm text-gray-800">{order.phoneNumber || 'Chưa có thông tin'}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                                                    {order.status?.toUpperCase() === 'PENDING' && (
+                                                        <button className="px-5 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors shadow-sm w-full sm:w-auto">
+                                                            Hủy đơn
+                                                        </button>
+                                                    )}
+                                                    {(order.status?.toUpperCase() === 'DELIVERED' || order.status?.toUpperCase() === 'COMPLETED') && (
+                                                        <button className="px-5 py-2 text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 rounded-lg transition-colors shadow-sm w-full sm:w-auto">
+                                                            Mua lại
+                                                        </button>
+                                                    )}
+                                                    <Link
+                                                        to={`/order-tracking/${order.id}`}
+                                                        className="px-5 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors shadow-sm w-full sm:w-auto text-center"
+                                                    >
+                                                        Theo dõi đơn hàng
+                                                    </Link>
+                                                </div>
+                                            </section>
+                                        )}
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        allOrders.length > 0 &&
+                        <div className="text-center py-12 px-6 bg-white rounded-xl shadow-lg">
+                            <FaSearch className="text-5xl text-gray-400 mx-auto mb-5" />
+                            <p className="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy đơn hàng nào khớp</p>
+                            <p className="text-gray-500">Vui lòng thử lại với bộ lọc hoặc từ khóa tìm kiếm khác.</p>
+                        </div>
+                    )}
+                </main>
             </div>
         </div>
     );

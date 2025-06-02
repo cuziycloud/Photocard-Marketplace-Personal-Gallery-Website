@@ -9,7 +9,9 @@ import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -45,9 +47,12 @@ public class Order {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+
+    // Set for uncertain order
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference
-    private Set<OrderItem> orderItems = new HashSet<>();
+    @OrderBy("id ASC")
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     @Column(name = "updated_at", nullable = false, updatable = false, insertable = false)
     @ColumnDefault("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")

@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api'; 
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const AuthContext = createContext(null);
 
@@ -11,21 +11,27 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true); 
+    const [loadingAuth, setLoadingAuth] = useState(true); 
     useEffect(() => {
+        console.log("AuthProvider useEffect: Checking stored user and token...");
         const storedUser = localStorage.getItem('kpopclz-user');
         const token = localStorage.getItem('kpopclz-token');
+
         if (storedUser && token) {
             try {
                 setCurrentUser(JSON.parse(storedUser));
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                console.log("AuthProvider: User and token loaded from localStorage.");
             } catch (e) {
-                console.error("Failed to parse stored user", e);
+                console.error("AuthProvider: Failed to parse stored user", e);
                 localStorage.removeItem('kpopclz-user');
                 localStorage.removeItem('kpopclz-token');
+                delete axios.defaults.headers.common['Authorization']; 
             }
+        } else {
+            console.log("AuthProvider: No user or token found in localStorage.");
         }
-        setLoading(false);
+        setLoadingAuth(false); 
     }, []);
 
     const login = async (email, password) => {
@@ -35,16 +41,24 @@ export const AuthProvider = ({ children }) => {
                 password,
             });
             if (response.data && response.data.user && response.data.token) {
-                setCurrentUser(response.data.user);
-                localStorage.setItem('kpopclz-user', JSON.stringify(response.data.user));
-                localStorage.setItem('kpopclz-token', response.data.token);
-                axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-                return response.data.user; 
+                const userData = response.data.user;
+                const token = response.data.token;
+
+                setCurrentUser(userData);
+                localStorage.setItem('kpopclz-user', JSON.stringify(userData));
+                localStorage.setItem('kpopclz-token', token);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                console.log("AuthProvider: Login successful, user and token set.");
+                return userData;
             } else {
-                throw new Error(response.data.message || 'Invalid response from server');
+                throw new Error(response.data?.message || 'Invalid response from server during login');
             }
         } catch (error) {
             console.error('Login failed:', error.response?.data?.message || error.message);
+            localStorage.removeItem('kpopclz-user');
+            localStorage.removeItem('kpopclz-token');
+            delete axios.defaults.headers.common['Authorization'];
+            setCurrentUser(null); 
             throw new Error(error.response?.data?.message || 'Login failed. Please check your credentials.');
         }
     };
@@ -56,10 +70,11 @@ export const AuthProvider = ({ children }) => {
                 email,
                 password,
             });
-            if (response.data && response.data.message === 'User registered successfully') {
-                return response.data; 
+            if (response.data && response.data.message) {
+                console.log("AuthProvider: Registration successful.");
+                return response.data;
             } else {
-                throw new Error(response.data.message || 'Invalid response from server');
+                throw new Error(response.data?.message || 'Invalid response from server during registration');
             }
         } catch (error) {
             console.error('Registration failed:', error.response?.data?.message || error.message);
@@ -67,11 +82,16 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
+    const logout = () => { 
         setCurrentUser(null);
         localStorage.removeItem('kpopclz-user');
         localStorage.removeItem('kpopclz-token');
         delete axios.defaults.headers.common['Authorization'];
+        console.log("AuthProvider: User logged out.");
+    };
+
+    const getToken = () => {
+        return localStorage.getItem('kpopclz-token');
     };
 
     const value = {
@@ -80,12 +100,13 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        loadingAuth: loading,
+        getToken, 
+        loadingAuth
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children} 
+            {!loadingAuth && children}
         </AuthContext.Provider>
     );
 };
