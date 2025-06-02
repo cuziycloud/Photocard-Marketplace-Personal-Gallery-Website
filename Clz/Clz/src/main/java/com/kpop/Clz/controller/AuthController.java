@@ -4,6 +4,9 @@ import com.kpop.Clz.dto.AuthResponse;
 import com.kpop.Clz.dto.LoginRequest;
 import com.kpop.Clz.dto.RegisterRequest;
 import com.kpop.Clz.model.User;
+
+import com.kpop.Clz.dto.ForgotPasswordRequest;
+import com.kpop.Clz.dto.ResetPasswordRequest;
 import com.kpop.Clz.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +17,22 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kpop.Clz.service.AuthService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private AuthService authService;
@@ -52,4 +66,30 @@ public class AuthController {
                     .body(Map.of("message", "An unexpected error occurred during login."));
         }
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest) {
+        try {
+            authService.requestPasswordReset(forgotPasswordRequest.getEmail());
+            return ResponseEntity.ok("Nếu tài khoản với email này tồn tại, một liên kết đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư đến (và thư mục spam).");
+        } catch (Exception e) {
+            logger.error("Lỗi trong quá trình yêu cầu quên mật khẩu cho email {}: {}", forgotPasswordRequest.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest) {
+        boolean success = authService.resetPassword(
+                resetPasswordRequest.getToken(),
+                resetPasswordRequest.getNewPassword()
+        );
+
+        if (success) {
+            return ResponseEntity.ok("Mật khẩu đã được đặt lại thành công. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới.");
+        } else {
+            return ResponseEntity.badRequest().body("Token không hợp lệ, đã hết hạn hoặc việc đặt lại mật khẩu thất bại. Vui lòng yêu cầu một liên kết đặt lại mới.");
+        }
+    }
+
 }

@@ -19,6 +19,7 @@ import { SearchFilterProvider } from './contexts/SearchFilterContext';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
 
 const DefaultLayout = ({ children }) => (
   <div className="bg-white dark:bg-gray-800 App flex flex-col min-h-screen">
@@ -41,6 +42,7 @@ function App() {
                   <Route element={<LoginLayout />}>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/reset-password-confirm" element={<ResetPasswordConfirmPage />} />
                   </Route>
                   <Route element={<DefaultLayout><MainLayout /></DefaultLayout>}>
                     <Route path="/" element={<ProductList />} />

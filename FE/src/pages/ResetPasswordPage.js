@@ -15,27 +15,40 @@ const ResetPasswordPage = () => {
         setSuccessMessage('');
 
         if (!email) {
-            setError('Please enter your email address.');
+            setError('Vui lòng nhập địa chỉ email của bạn.');
             return;
         }
         if (!/\S+@\S+\.\S+/.test(email)) {
-            setError('Please enter a valid email address.');
+            setError('Vui lòng nhập một địa chỉ email hợp lệ.');
             return;
         }
 
         setLoading(true);
         try {
-            console.log('Requesting password reset for email:', email);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email }),
+            });
 
-            setSuccessMessage('If an account with this email exists, a password reset link has been sent. Please check your inbox (and spam folder).');
-            setEmail(''); 
+            const responseText = await response.text(); 
+
+            if (response.ok) {
+                setSuccessMessage(responseText || 'Nếu tài khoản với email này tồn tại, một liên kết đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư đến (và thư mục spam).');
+                setEmail(''); 
+            } else {
+                setError(responseText || 'Không thể yêu cầu đặt lại mật khẩu. Vui lòng thử lại.');
+            }
         } catch (err) {
-            setError(err.message || 'Failed to request password reset. Please try again later.');
+            console.error("Lỗi yêu cầu quên mật khẩu:", err);
+            setError(err.message || 'Đã xảy ra lỗi. Vui lòng kiểm tra kết nối và thử lại.');
         } finally {
             setLoading(false);
         }
     };
+
 
     const commonInputClass = "w-full px-4 py-3 rounded-lg bg-gray-200 mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none";
     const commonButtonClass = "w-full block bg-indigo-600 hover:bg-indigo-500 focus:bg-indigo-500 text-white font-semibold rounded-lg px-4 py-3 transition-colors duration-300";
