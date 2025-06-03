@@ -55,7 +55,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(username); // username ở đây phải là email nếu CustomUserDetailsService dùng email
+            UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(username);
             System.out.println("JwtRequestFilter: Loaded UserDetails for: " + userDetails.getUsername());
 
             if (jwtUtil.validateToken(jwtToken, userDetails)) {

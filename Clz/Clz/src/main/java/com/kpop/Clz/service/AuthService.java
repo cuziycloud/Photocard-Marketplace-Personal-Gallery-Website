@@ -122,42 +122,20 @@ public class AuthService {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setPhoneNumber(phoneNumber); // Make sure your User entity has this setter
-        user.setPasswordHash(passwordEncoder.encode(password)); // Assuming User entity field is passwordHash
+        user.setPhoneNumber(phoneNumber);
+        user.setPasswordHash(passwordEncoder.encode(password));
 
         if (avatarFile != null && !avatarFile.isEmpty()) {
-            // storeFile should throw IOException on failure
             String avatarUrl = fileStorageService.storeFile(avatarFile);
-            user.setAvatarUrl(avatarUrl); // Assuming User entity has avatarUrl setter
+            user.setAvatarUrl(avatarUrl);
         }
 
-        user.setRole(User.Role.customer); // Or your actual Role enum/logic
-        // user.setCreatedAt(LocalDateTime.now()); // If not using @CreationTimestamp
-        // user.setUpdatedAt(LocalDateTime.now()); // If not using @UpdateTimestamp
+        user.setRole(User.Role.customer);
 
         return userRepository.save(user);
     }
 
     public AuthResponse loginUser(LoginRequest loginRequest) {
-        // Cách 1: Sd AuthenticationManager (nếu đã cấu hình Spring Security)
-        // try {
-        //     authenticationManager.authenticate(
-        //             new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-        //     );
-        // } catch (BadCredentialsException e) {
-        //     throw new BadCredentialsException("INVALID_CREDENTIALS", e);
-        // } catch (AuthenticationException e) {
-        //      throw new RuntimeException("Authentication failed: " + e.getMessage(), e);
-        // }
-        //
-        // final UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getEmail());
-        // final String token = jwtUtil.generateToken(userDetails);
-        // User user = userRepository.findByEmail(loginRequest.getEmail())
-        //        .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + loginRequest.getEmail()));
-        // UserDto userDto = new UserDto(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
-        // return new AuthResponse(token, userDto);
-
-        // Cách 2: Tự kiểm tra (đơn giản hơn nếu chưa cấu hình AuthenticationManager hoàn chỉnh)
         User user = userRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + loginRequest.getEmail()));
 
@@ -166,7 +144,8 @@ public class AuthService {
         }
 
         final String token = jwtUtil.generateToken(user.getEmail());
-        UserDto userDto = new UserDto(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+        UserDto userDto = UserDto.fromUser(user);
+
         return new AuthResponse(token, userDto);
     }
 }
