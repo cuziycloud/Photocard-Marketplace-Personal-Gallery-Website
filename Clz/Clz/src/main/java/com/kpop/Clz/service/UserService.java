@@ -3,23 +3,27 @@ package com.kpop.Clz.service;
 import com.kpop.Clz.dto.UserProfileUpdateRequestDto;
 import com.kpop.Clz.model.User;
 import com.kpop.Clz.repository.UserRepository;
+import com.kpop.Clz.exception.ResourceNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Optional<User> findByEmail(String email) {
@@ -44,18 +48,23 @@ public class UserService {
 
     public User updateUserProfile(Integer userId, UserProfileUpdateRequestDto requestDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        if (requestDto.getUsername() != null && !requestDto.getUsername().equals(user.getUsername())) {
-            if (userRepository.existsByUsername(requestDto.getUsername())) {
-                throw new RuntimeException("Username " + requestDto.getUsername() + " is already taken.");
+        if (requestDto.getUsername() != null && !requestDto.getUsername().trim().isEmpty() && !requestDto.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsernameAndIdNot(requestDto.getUsername(), userId)) {
+                throw new IllegalArgumentException("Username '" + requestDto.getUsername() + "' is already taken.");
             }
-            user.setUsername(requestDto.getUsername());
+            user.setUsername(requestDto.getUsername().trim());
+        }
+        if (requestDto.getPhonenumber() != null) {
+            if (requestDto.getPhonenumber().trim().isEmpty()) {
+                user.setPhoneNumber(null);
+            } else {
+                user.setPhoneNumber(requestDto.getPhonenumber().trim());
+            }
         }
 
-        if (requestDto.getPhoneNumber() != null) {
-            user.setPhoneNumber(requestDto.getPhoneNumber());
-        }
+        user.setUpdatedAt(LocalDateTime.now());
 
         return userRepository.save(user);
     }

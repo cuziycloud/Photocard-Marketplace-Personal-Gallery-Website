@@ -7,5 +7,5 @@ import lombok.Setter;
 @Setter
 public class UserProfileUpdateRequestDto {
     private String username;
-    private String phoneNumber;
+    private String phonenumber;
 }

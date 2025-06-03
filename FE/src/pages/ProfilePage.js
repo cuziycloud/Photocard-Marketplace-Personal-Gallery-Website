@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaUserEdit, FaLock, FaImage, FaCamera, FaPhone } from 'react-icons/fa';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const CheckCircleIcon = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -9,47 +11,88 @@ const CheckCircleIcon = ({ className }) => (
     </svg>
 );
 
-const ProfileInformation = ({ currentUser, onUpdateSuccess, onUpdateError, refreshCurrentUserContext }) => {
-    const [username, setUsername] = useState(currentUser?.username || '');
-    const [email, setEmail] = useState(currentUser?.email || '');
-    const [currentPhoneNumber, setCurrentPhoneNumber] = useState(currentUser?.phonenumber || '');
+const ProfileInformation = ({ currentUser: initialCurrentUser, onUpdateSuccess, onUpdateError, refreshCurrentUserContext }) => {
+    const { currentUser: contextCurrentUser, getToken } = useAuth();
+    const currentUserToUse = contextCurrentUser || initialCurrentUser;
+
+    const [username, setUsername] = useState(currentUserToUse?.username || '');
+    const [email, setEmail] = useState(currentUserToUse?.email || '');
+    const [phoneNumber, setPhoneNumber] = useState(currentUserToUse?.phonenumber || '');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        setUsername(currentUser?.username || '');
-        setEmail(currentUser?.email || '');
-        setCurrentPhoneNumber(currentUser?.phonenumber || ''); 
-    }, [currentUser]);
+        if (currentUserToUse) {
+            setUsername(currentUserToUse.username || '');
+            setEmail(currentUserToUse.email || '');
+            setPhoneNumber(currentUserToUse.phonenumber || '');
+        }
+    }, [currentUserToUse]);
 
     const isValidPhoneNumber = (phone) => {
-        if (!phone) return true; 
-        return /^\d{10,11}$/.test(phone);
+        if (!phone || phone.trim() === '') return true; 
+        return /^\d{10,11}$/.test(phone.trim());
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         onUpdateError('');
+        const trimmedPhoneNumber = phoneNumber.trim();
 
-        if (currentPhoneNumber && !isValidPhoneNumber(currentPhoneNumber)) {
-            onUpdateError('Số điện thoại không hợp lệ. Vui lòng nhập 10 hoặc 11 chữ số.');
+        if (trimmedPhoneNumber && !isValidPhoneNumber(trimmedPhoneNumber)) {
+            onUpdateError('Số điện thoại không hợp lệ. Vui lòng nhập 10 hoặc 11 chữ số, hoặc để trống.');
+            return;
+        }
+
+        if (!currentUserToUse || !currentUserToUse.id) {
+            onUpdateError('Không thể xác định người dùng để cập nhật. Vui lòng thử tải lại trang.');
+            setLoading(false);
             return;
         }
 
         setLoading(true);
         try {
-            const updatedData = { 
-                username, 
-                phonenumber: currentPhoneNumber 
+            const updatedData = {
+                username: username.trim(),
+                phonenumber: trimmedPhoneNumber === '' ? null : trimmedPhoneNumber,
             };
-            await new Promise(resolve => setTimeout(resolve, 1000)); 
-            console.log("Profile update submitted with:", updatedData);
+
+            // console.log("ProfileInformation: Sending update data:", updatedData);
+            const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('kpopclz-token');
+
+            if (!token) {
+                onUpdateError('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.put(
+                `${API_BASE_URL}/users/${currentUserToUse.id}/profile`,
+                updatedData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            //console.log("ProfileInformation: Profile update API response:", response.data);
 
             if (typeof refreshCurrentUserContext === 'function') {
-                await refreshCurrentUserContext(); 
+                await refreshCurrentUserContext();
             }
-            onUpdateSuccess('Thông tin cá nhân đã được cập nhật!');
+
+            onUpdateSuccess(response.data.message || 'Thông tin cá nhân đã được cập nhật thành công!');
+
         } catch (error) {
-            onUpdateError(error.message || 'Đã xảy ra lỗi khi cập nhật thông tin.');
+            let errorMessage = 'Đã xảy ra lỗi khi cập nhật thông tin.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            onUpdateError(errorMessage);
+            console.error("ProfileInformation: Profile update failed:", error.response?.data || error.message || error);
         } finally {
             setLoading(false);
         }
@@ -65,25 +108,25 @@ const ProfileInformation = ({ currentUser, onUpdateSuccess, onUpdateError, refre
                 <label htmlFor="profile-username" className={labelClass}>
                     Tên người dùng
                 </label>
-                <input 
-                    type="text" 
-                    id="profile-username" 
-                    value={username} 
-                    onChange={(e) => setUsername(e.target.value)} 
-                    className={inputClass} 
-                    required 
+                <input
+                    type="text"
+                    id="profile-username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={inputClass}
+                    required
                 />
             </div>
             <div>
                 <label htmlFor="profile-email" className={labelClass}>
                     Email
                 </label>
-                <input 
-                    type="email" 
-                    id="profile-email" 
-                    value={email} 
-                    readOnly 
-                    className={readOnlyInputClass} 
+                <input
+                    type="email"
+                    id="profile-email"
+                    value={email}
+                    readOnly
+                    className={readOnlyInputClass}
                 />
                 <p className="mt-1 text-xs text-gray-500">Email không thể thay đổi.</p>
             </div>
@@ -91,19 +134,19 @@ const ProfileInformation = ({ currentUser, onUpdateSuccess, onUpdateError, refre
                 <label htmlFor="profile-phoneNumber" className={labelClass}>
                     Số điện thoại
                 </label>
-                <input 
-                    type="tel" 
-                    id="profile-phoneNumber" 
-                    value={currentPhoneNumber} 
-                    onChange={(e) => setCurrentPhoneNumber(e.target.value)} 
-                    className={inputClass} 
+                <input
+                    type="tel"
+                    id="profile-phoneNumber"
+                    value={phoneNumber} 
+                    onChange={(e) => setPhoneNumber(e.target.value)} 
+                    className={inputClass}
                     placeholder="Nhập số điện thoại (VD: 0912345678)"
                 />
             </div>
             <div className="pt-2">
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !currentUserToUse} 
                     className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-sky-400 transition-colors"
                 >
                     {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
@@ -131,7 +174,7 @@ const ChangePassword = ({ onUpdateSuccess, onUpdateError }) => {
         setLoading(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log("Password change attempted");
+            //console.log("Password change attempted");
             onUpdateSuccess('Mật khẩu đã được thay đổi thành công!');
             setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
         } catch (error) {
@@ -210,7 +253,7 @@ const AvatarUpload = ({ currentUser, onUpdateSuccess, onUpdateError, refreshCurr
         formData.append('avatar', selectedFile); 
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log("Avatar uploaded, preview is:", preview); 
+            //console.log("Avatar uploaded, preview is:", preview); 
 
             if (typeof refreshCurrentUserContext === 'function') {
                 await refreshCurrentUserContext(); 
@@ -287,7 +330,7 @@ const ProfilePage = () => {
     
     useEffect(() => {
         if(currentUser) {
-            console.log("Current User Data in ProfilePage (useEffect):", currentUser);
+            //console.log("Current User Data in ProfilePage (useEffect):", currentUser);
         }
     }, [currentUser]);
 
