@@ -189,7 +189,7 @@ const LoginPage = () => {
                             </button>
                         </form>
                     ) : (
-                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" onSubmit={handleRegisterSubmit}> {/* Adjusted gap-y */}
+                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" onSubmit={handleRegisterSubmit}> 
                             <div className="md:col-span-2">
                                 <label htmlFor="register-email" className={commonLabelClass}>Email address</label>
                                 <input id="register-email" type="email" autoComplete="email" required className={commonInputClass} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -212,16 +212,29 @@ const LoginPage = () => {
                             </div>
                             <div className="md:col-span-2">
                                 <label htmlFor="register-avatar" className={commonLabelClass}>Avatar (Optional)</label>
-                                <input
-                                    id="register-avatar" name="avatar" type="file" accept="image/*" ref={avatarInputRef}
-                                    className="w-full text-sm text-gray-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                                    onChange={handleAvatarChange}
-                                />
-                                {avatarPreview && (
-                                    <div className="mt-2">
-                                        <img src={avatarPreview} alt="Avatar Preview" className="h-16 w-16 rounded-full object-cover" />
-                                    </div>
-                                )}
+                                <div className="flex items-center mt-1 space-x-4"> 
+                                    <input
+                                        id="register-avatar"
+                                        name="avatar"
+                                        type="file"
+                                        accept="image/*"
+                                        ref={avatarInputRef}
+                                        className="text-sm text-gray-500
+                                                file:mr-6 file:py-4 file:px-4
+                                                file:rounded-md file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-indigo-50 file:text-indigo-700
+                                                hover:file:bg-indigo-100"
+                                        onChange={handleAvatarChange}
+                                    />
+                                    {avatarPreview && (
+                                        <img
+                                            src={avatarPreview}
+                                            alt="Avatar Preview"
+                                            className="w-16 h-16 rounded-full object-cover"
+                                        />
+                                    )}
+                                </div>
                             </div>
                             <div className="md:col-span-2">
                                 <button type="submit" className={commonButtonClass} disabled={loading}>
