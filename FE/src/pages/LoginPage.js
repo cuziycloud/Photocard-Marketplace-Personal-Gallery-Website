@@ -11,22 +11,71 @@ const LoginPage = () => {
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
+    const [formErrors, setFormErrors] = useState({}); 
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
     const { login, register } = useAuth();
     const avatarInputRef = useRef(null);
 
+    const isValidEmail = (email) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    const isValidPhoneNumber = (phone) => {
+        return /^\d{10,11}$/.test(phone);
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        if (!username.trim()) {
+            errors.username = 'Username is required.';
+        } else if (username.length < 3) {
+            errors.username = 'Username must be at least 3 characters long.';
+        }
+
+        if (!email.trim()) {
+            errors.email = 'Email is required.';
+        } else if (!isValidEmail(email)) {
+            errors.email = 'Invalid email format.';
+        }
+
+        if (!phoneNumber.trim()) {
+            errors.phoneNumber = 'Phone number is required.';
+        } else if (!isValidPhoneNumber(phoneNumber)) {
+            errors.phoneNumber = 'Phone number must be 10 or 11 digits.';
+        }
+
+        if (!password) {
+            errors.password = 'Password is required.';
+        } else if (password.length < 6) {
+            errors.password = 'Password must be at least 6 characters long.';
+        }
+
+        if (!confirmPassword) {
+            errors.confirmPassword = 'Confirm password is required.';
+        } else if (password !== confirmPassword) {
+            errors.confirmPassword = 'Passwords do not match.';
+        }
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        setFormErrors({});
         setLoading(true);
+        if (!email || !password) {
+            setFormErrors({ general: 'Email and password are required for login.' });
+            setLoading(false);
+            return;
+        }
         try {
             await login(email, password);
             navigate('/');
         } catch (err) {
-            setError(err.message || 'Failed to login. Please check your credentials.');
+            setFormErrors({ general: err.message || 'Failed to login. Please check your credentials.' });
         } finally {
             setLoading(false);
         }
@@ -41,6 +90,9 @@ const LoginPage = () => {
                 setAvatarPreview(reader.result);
             };
             reader.readAsDataURL(file);
+            if (formErrors.avatar) {
+                setFormErrors(prev => ({ ...prev, avatar: undefined }));
+            }
         } else {
             setAvatarFile(null);
             setAvatarPreview(null);
@@ -49,11 +101,9 @@ const LoginPage = () => {
 
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
-        if (password !== confirmPassword) {
-            setError('Passwords do not match!');
-            return;
+        if (!validateForm()) { 
+            return; 
         }
-        setError('');
         setLoading(true);
         const formData = new FormData();
         formData.append('username', username);
@@ -69,7 +119,7 @@ const LoginPage = () => {
             setActiveTab('login');
             resetFormFields();
         } catch (err) {
-            setError(err.message || 'Failed to register. Please try again.');
+            setFormErrors({ general: err.message || 'Failed to register. Please try again.' });
         } finally {
             setLoading(false);
         }
@@ -86,12 +136,14 @@ const LoginPage = () => {
         if (avatarInputRef.current) {
             avatarInputRef.current.value = "";
         }
-        setError('');
+        setFormErrors({});
     };
 
     const commonInputClass = "w-full px-4 py-3 rounded-lg bg-gray-200 mt-1 border focus:border-indigo-500 focus:bg-white focus:outline-none text-sm";
+    const errorInputClass = "border-red-500 focus:border-red-500";
     const commonButtonClass = "w-full block bg-indigo-600 hover:bg-indigo-500 focus:bg-indigo-500 text-white font-semibold rounded-lg px-4 py-3 transition-colors duration-300 mt-6";
-    const commonLabelClass = "block text-sm font-medium text-gray-700";
+    const commonLabelClass = "block text-sm font-medium text-gray-700 pt-1";
+    const errorTextClass = "text-xs text-red-600 mt-1";
 
     const LeftColumnContent = () => (
         <div className="w-full h-full bg-indigo-600 p-8 md:p-12 text-white flex flex-col justify-center items-center rounded-l-xl lg:rounded-r-none">
@@ -154,10 +206,9 @@ const LoginPage = () => {
                             Register
                         </button>
                     </div>
-
-                    {error && (
+                    {formErrors.general && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2.5 rounded relative text-sm mb-4" role="alert">
-                            <span className="block sm:inline">{error}</span>
+                            <span className="block sm:inline">{formErrors.general}</span>
                         </div>
                     )}
 
@@ -167,7 +218,8 @@ const LoginPage = () => {
                                 <label htmlFor="login-email" className={commonLabelClass}>Email address</label>
                                 <input
                                     id="login-email" type="email" autoComplete="email" required
-                                    className={commonInputClass} placeholder="you@example.com"
+                                    className={`${commonInputClass} ${formErrors.email ? errorInputClass : ''}`}
+                                    placeholder="you@example.com"
                                     value={email} onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
@@ -175,7 +227,8 @@ const LoginPage = () => {
                                 <label htmlFor="login-password" className={commonLabelClass}>Password</label>
                                 <input
                                     id="login-password" type="password" autoComplete="current-password" required
-                                    className={commonInputClass} placeholder="Password"
+                                    className={`${commonInputClass} ${formErrors.password ? errorInputClass : ''}`}
+                                    placeholder="Password"
                                     value={password} onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
@@ -189,52 +242,79 @@ const LoginPage = () => {
                             </button>
                         </form>
                     ) : (
-                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" onSubmit={handleRegisterSubmit}> 
+                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" onSubmit={handleRegisterSubmit}> {/* Giảm gap-y một chút */}
                             <div className="md:col-span-2">
                                 <label htmlFor="register-email" className={commonLabelClass}>Email address</label>
-                                <input id="register-email" type="email" autoComplete="email" required className={commonInputClass} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                                <input id="register-email" type="email" autoComplete="email" 
+                                       className={`${commonInputClass} ${formErrors.email ? errorInputClass : ''}`} 
+                                       placeholder="you@example.com" value={email} 
+                                       onChange={(e) => setEmail(e.target.value)} />
+                                {formErrors.email && <p className={errorTextClass}>{formErrors.email}</p>}
                             </div>
                             <div>
                                 <label htmlFor="register-username" className={commonLabelClass}>Username</label>
-                                <input id="register-username" type="text" autoComplete="username" required className={commonInputClass} placeholder="Your username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                                <input id="register-username" type="text" autoComplete="username" 
+                                       className={`${commonInputClass} ${formErrors.username ? errorInputClass : ''}`} 
+                                       placeholder="Your username" value={username} 
+                                       onChange={(e) => setUsername(e.target.value)} />
+                                {formErrors.username && <p className={errorTextClass}>{formErrors.username}</p>}
                             </div>
                             <div>
                                 <label htmlFor="register-phone" className={commonLabelClass}>Phone Number</label>
-                                <input id="register-phone" type="tel" autoComplete="tel" required className={commonInputClass} placeholder="Your phone number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                                <input id="register-phone" type="tel" autoComplete="tel" 
+                                       className={`${commonInputClass} ${formErrors.phoneNumber ? errorInputClass : ''}`} 
+                                       placeholder="0912345678" value={phoneNumber} 
+                                       onChange={(e) => setPhoneNumber(e.target.value)} />
+                                {formErrors.phoneNumber && <p className={errorTextClass}>{formErrors.phoneNumber}</p>}
                             </div>
                             <div>
                                 <label htmlFor="register-password" className={commonLabelClass}>Password</label>
-                                <input id="register-password" type="password" autoComplete="new-password" required className={commonInputClass} placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                <input id="register-password" type="password" autoComplete="new-password" 
+                                       className={`${commonInputClass} ${formErrors.password ? errorInputClass : ''}`} 
+                                       placeholder="Create a password (min 6 chars)" value={password} 
+                                       onChange={(e) => setPassword(e.target.value)} />
+                                {formErrors.password && <p className={errorTextClass}>{formErrors.password}</p>}
                             </div>
                             <div>
                                 <label htmlFor="confirm-password" className={commonLabelClass}>Confirm Password</label>
-                                <input id="confirm-password" type="password" autoComplete="new-password" required className={commonInputClass} placeholder="Confirm your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                                <input id="confirm-password" type="password" autoComplete="new-password" 
+                                       className={`${commonInputClass} ${formErrors.confirmPassword ? errorInputClass : ''}`} 
+                                       placeholder="Confirm your password" value={confirmPassword} 
+                                       onChange={(e) => setConfirmPassword(e.target.value)} />
+                                {formErrors.confirmPassword && <p className={errorTextClass}>{formErrors.confirmPassword}</p>}
                             </div>
+                        
                             <div className="md:col-span-2">
-                                <label htmlFor="register-avatar" className={commonLabelClass}>Avatar (Optional)</label>
-                                <div className="flex items-center mt-1 space-x-4"> 
+                                <label className={commonLabelClass}>Avatar (Optional)</label>
+                                <div className="flex items-center mt-4">
+                                    <label
+                                        htmlFor="register-avatar-input"
+                                        className="cursor-pointer py-2 px-3.5 rounded-md border-0 text-sm font-semibold 
+                                                bg-indigo-100 text-indigo-700 hover:bg-indigo-200 
+                                                transition-colors duration-150 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-1"
+                                    >
+                                        Choose File
+                                    </label>
                                     <input
-                                        id="register-avatar"
+                                        id="register-avatar-input"
                                         name="avatar"
                                         type="file"
                                         accept="image/*"
                                         ref={avatarInputRef}
-                                        className="text-sm text-gray-500
-                                                file:mr-6 file:py-4 file:px-4
-                                                file:rounded-md file:border-0
-                                                file:text-sm file:font-semibold
-                                                file:bg-indigo-50 file:text-indigo-700
-                                                hover:file:bg-indigo-100"
+                                        className="hidden"
                                         onChange={handleAvatarChange}
                                     />
                                     {avatarPreview && (
-                                        <img
-                                            src={avatarPreview}
-                                            alt="Avatar Preview"
-                                            className="w-16 h-16 rounded-full object-cover"
-                                        />
+                                        <div className="ml-10">
+                                            <img
+                                                src={avatarPreview}
+                                                alt="Avatar Preview"
+                                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200 shadow-sm"
+                                            />
+                                        </div>
                                     )}
                                 </div>
+                                {formErrors.avatar && <p className={errorTextClass}>{formErrors.avatar}</p>}
                             </div>
                             <div className="md:col-span-2">
                                 <button type="submit" className={commonButtonClass} disabled={loading}>
@@ -250,8 +330,7 @@ const LoginPage = () => {
                                 setActiveTab(activeTab === 'login' ? 'register' : 'login');
                                 resetFormFields();
                             }}
-                            className="font-medium text-indigo-600 hover:text-indigo-500 ml-1 focus:outline-none"
-                        >
+                            className="font-medium text-indigo-600 hover:text-indigo-500 ml-1 focus:outline-none">
                             {activeTab === 'login' ? 'Sign up' : 'Sign in'}
                         </button>
                     </p>
