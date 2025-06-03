@@ -47,7 +47,7 @@ public class GalleryPostController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         String username = authentication.getName();
-        User currentUser = userService.findByUsername(username)
+        User currentUser = userService.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("User not found for username: " + username));
 
         if (postRequest.getImageUrl() == null || postRequest.getImageUrl().trim().isEmpty() ||
@@ -76,7 +76,7 @@ public class GalleryPostController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         String username = authentication.getName();
-        User currentUser = userService.findByUsername(username)
+        User currentUser = userService.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("User not found for username: " + username));
 
         if (imageFile == null || imageFile.isEmpty()) {

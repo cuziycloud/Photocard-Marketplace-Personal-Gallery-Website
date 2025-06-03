@@ -12,26 +12,49 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [loadingAuth, setLoadingAuth] = useState(true); 
+
+    const setUserAndStorage = (userData, token) => {
+        console.log("Setting user data in AuthProvider:", userData); 
+        setCurrentUser(userData);
+        localStorage.setItem('kpopclz-user', JSON.stringify(userData));
+        if (token) {
+            localStorage.setItem('kpopclz-token', token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+    };
+
+    const fetchCurrentUser = async () => {
+        const token = localStorage.getItem('kpopclz-token');
+        if (!token) {
+            return null;
+        }
+        try {
+            const response = await axios.get(`${API_BASE_URL}/auth/me`, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            if (response.data) {
+                console.log("AuthProvider: Current user refreshed from API.");
+                return response.data;
+            }
+        } catch (error) {
+            console.error("AuthProvider: Failed to fetch current user, logging out.", error);
+            logout();
+        }
+        return null;
+    };
+
+
     useEffect(() => {
         console.log("AuthProvider useEffect: Checking stored user and token...");
-        const storedUser = localStorage.getItem('kpopclz-user');
         const token = localStorage.getItem('kpopclz-token');
 
-        if (storedUser && token) {
-            try {
-                setCurrentUser(JSON.parse(storedUser));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                console.log("AuthProvider: User and token loaded from localStorage.");
-            } catch (e) {
-                console.error("AuthProvider: Failed to parse stored user", e);
-                localStorage.removeItem('kpopclz-user');
-                localStorage.removeItem('kpopclz-token');
-                delete axios.defaults.headers.common['Authorization']; 
-            }
+        if (token) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            fetchCurrentUser().finally(() => setLoadingAuth(false));
         } else {
-            console.log("AuthProvider: No user or token found in localStorage.");
+            console.log("AuthProvider: No token found in localStorage.");
+            setLoadingAuth(false);
         }
-        setLoadingAuth(false); 
     }, []);
 
     const login = async (email, password) => {
@@ -41,24 +64,20 @@ export const AuthProvider = ({ children }) => {
                 password,
             });
             if (response.data && response.data.user && response.data.token) {
-                const userData = response.data.user;
+                const userDataFromApi = response.data.user;
                 const token = response.data.token;
 
-                setCurrentUser(userData);
-                localStorage.setItem('kpopclz-user', JSON.stringify(userData));
-                localStorage.setItem('kpopclz-token', token);
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                console.log("User data from LOGIN API in AuthProvider:", userDataFromApi);
+
+                setUserAndStorage(userDataFromApi, token);
                 console.log("AuthProvider: Login successful, user and token set.");
-                return userData;
+                return userDataFromApi;
             } else {
                 throw new Error(response.data?.message || 'Invalid response from server during login');
             }
         } catch (error) {
             console.error('Login failed:', error.response?.data?.message || error.message);
-            localStorage.removeItem('kpopclz-user');
-            localStorage.removeItem('kpopclz-token');
-            delete axios.defaults.headers.common['Authorization'];
-            setCurrentUser(null); 
+            logout();
             throw new Error(error.response?.data?.message || 'Login failed. Please check your credentials.');
         }
     };
@@ -92,6 +111,13 @@ export const AuthProvider = ({ children }) => {
         return localStorage.getItem('kpopclz-token');
     };
 
+    const refreshCurrentUser = async () => {
+        console.log("AuthProvider: Attempting to refresh current user...");
+        setLoadingAuth(true); 
+        await fetchCurrentUser();
+        setLoadingAuth(false);
+    };
+
     const value = {
         currentUser,
         isLoggedIn: !!currentUser,
@@ -99,7 +125,8 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         getToken, 
-        loadingAuth
+        loadingAuth,
+        refreshCurrentUser 
     };
 
     return (

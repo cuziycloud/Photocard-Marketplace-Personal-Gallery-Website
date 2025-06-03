@@ -35,7 +35,7 @@ public class AuthController {
             @RequestParam("email") String email,
             @RequestParam("password") String password,
             @RequestParam("phoneNumber") String phoneNumber,
-            @RequestParam(name = "avatar", required = false) MultipartFile avatarFile) { // Key "avatar" matches frontend FormData
+            @RequestParam(name = "avatar", required = false) MultipartFile avatarFile) {
 
         try {
             User registeredUser = authService.registerUser(username, email, password, phoneNumber, avatarFile);
@@ -43,11 +43,8 @@ public class AuthController {
                     .body(Map.of("message", "User registered successfully",
                             "userId", registeredUser.getId()));
         } catch (IllegalArgumentException e) {
-            // This exception should ideally be thrown by your authService for specific validation errors
-            // (e.g., username/email already exists, password too weak - if you implement that)
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        } catch (IOException e) { // Specifically catch IOException for file storage issues
-            // Log this error server-side
+        } catch (IOException e) {
             System.err.println("File storage error during registration: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error storing avatar file. Please try again."));
