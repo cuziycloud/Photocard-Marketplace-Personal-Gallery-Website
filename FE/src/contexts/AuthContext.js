@@ -29,16 +29,17 @@ export const AuthProvider = ({ children }) => {
             return null;
         }
         try {
-            const response = await axios.get(`${API_BASE_URL}/auth/me`, { 
+            const response = await axios.get(`${API_BASE_URL}/users/me`, { 
                 headers: { Authorization: `Bearer ${token}` } 
             });
             if (response.data) {
-                console.log("AuthProvider: Current user refreshed from API.");
+                setUserAndStorage(response.data, token); 
+                console.log("AuthProvider: Current user refreshed from API (/users/me).");
                 return response.data;
             }
         } catch (error) {
-            console.error("AuthProvider: Failed to fetch current user, logging out.", error);
-            logout();
+            console.error("AuthProvider: Failed to fetch current user from /users/me, logging out.", error.response?.data || error.message);
+            logout(); 
         }
         return null;
     };

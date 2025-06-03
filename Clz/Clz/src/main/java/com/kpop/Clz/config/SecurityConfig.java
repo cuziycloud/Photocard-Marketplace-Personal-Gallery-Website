@@ -61,14 +61,24 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/forgot-password").permitAll()
+                        .requestMatchers("/api/auth/reset-password").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/groups/**").permitAll()
                         .requestMatchers("/api/gallery-posts/**").permitAll()
+
                         .requestMatchers("/api/users/{userId}/cart/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/users/{userId}/avatar").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/orders/create").authenticated()
-                        .requestMatchers("/api/orders/my-orders").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/orders/my-orders").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
