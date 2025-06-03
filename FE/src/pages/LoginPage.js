@@ -2,6 +2,13 @@ import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+const CheckCircleIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.06-1.06l-3.093 3.093-1.03-1.03a.75.75 0 0 0-1.06 1.061l1.56 1.56a.75.75 0 0 0 1.06 0l3.593-3.593Z" clipRule="evenodd" />
+    </svg>
+);
+
+
 const LoginPage = () => {
     const [activeTab, setActiveTab] = useState('login');
     const [email, setEmail] = useState('');
@@ -13,6 +20,7 @@ const LoginPage = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [formErrors, setFormErrors] = useState({}); 
     const [loading, setLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(''); 
 
     const navigate = useNavigate();
     const { login, register } = useAuth();
@@ -61,10 +69,10 @@ const LoginPage = () => {
         return Object.keys(errors).length === 0;
     };
 
-
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setFormErrors({});
+        setSuccessMessage('');
         setLoading(true);
         if (!email || !password) {
             setFormErrors({ general: 'Email and password are required for login.' });
@@ -101,6 +109,7 @@ const LoginPage = () => {
 
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
+        setSuccessMessage(''); 
         if (!validateForm()) { 
             return; 
         }
@@ -115,9 +124,8 @@ const LoginPage = () => {
         }
         try {
             await register(formData);
-            alert('Registration successful! Please login.');
-            setActiveTab('login');
-            resetFormFields();
+            setSuccessMessage('Registration successful! Please switch to the login tab.');
+            setFormErrors({});
         } catch (err) {
             setFormErrors({ general: err.message || 'Failed to register. Please try again.' });
         } finally {
@@ -125,7 +133,7 @@ const LoginPage = () => {
         }
     };
 
-    const resetFormFields = () => {
+    const resetFormFieldsAndMessages = () => { 
         setEmail('');
         setPassword('');
         setUsername('');
@@ -137,13 +145,15 @@ const LoginPage = () => {
             avatarInputRef.current.value = "";
         }
         setFormErrors({});
+        setSuccessMessage(''); 
     };
 
-    const commonInputClass = "w-full px-4 py-3 rounded-lg bg-gray-200 mt-1 border focus:border-indigo-500 focus:bg-white focus:outline-none text-sm";
+    const commonInputClass = "w-full px-3 py-2 rounded-lg bg-gray-200 mt-1 border focus:border-indigo-500 focus:bg-white focus:outline-none text-sm";
     const errorInputClass = "border-red-500 focus:border-red-500";
     const commonButtonClass = "w-full block bg-indigo-600 hover:bg-indigo-500 focus:bg-indigo-500 text-white font-semibold rounded-lg px-4 py-3 transition-colors duration-300 mt-6";
-    const commonLabelClass = "block text-sm font-medium text-gray-700 pt-1";
+    const commonLabelClass = "block text-sm font-medium text-gray-700";
     const errorTextClass = "text-xs text-red-600 mt-1";
+    const successMessageClass = "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-sm mb-4 flex items-center";
 
     const LeftColumnContent = () => (
         <div className="w-full h-full bg-indigo-600 p-8 md:p-12 text-white flex flex-col justify-center items-center rounded-l-xl lg:rounded-r-none">
@@ -167,12 +177,12 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-            <div className="flex flex-col lg:flex-row w-full max-w-sm lg:max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex flex-col lg:flex-row w-full max-w-sm lg:max-w-6xl bg-white rounded-xl shadow-2xl overflow-hidden">
                 <div className="hidden lg:flex lg:w-5/12"> 
                    <LeftColumnContent />
                 </div>
 
-                <div className="w-full lg:w-7/12 p-6 sm:p-8 md:p-10"> 
+                <div className="w-full lg:w-7/12 p-4 sm:p-6 md:p-8"> 
                     <div className="lg:hidden mb-6">
                         <Link to="/" className="flex justify-center">
                             <img
@@ -188,7 +198,7 @@ const LoginPage = () => {
 
                     <div className="flex border-b border-gray-300 mt-3 mb-5"> 
                         <button
-                            onClick={() => { setActiveTab('login'); resetFormFields(); }}
+                            onClick={() => { setActiveTab('login'); resetFormFieldsAndMessages(); }} 
                             className={`flex-1 py-2.5 text-sm font-medium text-center focus:outline-none transition-colors duration-300
                                 ${activeTab === 'login'
                                     ? 'border-b-2 border-indigo-600 text-indigo-600'
@@ -197,7 +207,7 @@ const LoginPage = () => {
                             Login
                         </button>
                         <button
-                            onClick={() => { setActiveTab('register'); resetFormFields(); }}
+                            onClick={() => { setActiveTab('register'); resetFormFieldsAndMessages(); }} 
                             className={`flex-1 py-2.5 text-sm font-medium text-center focus:outline-none transition-colors duration-300
                                 ${activeTab === 'register'
                                     ? 'border-b-2 border-indigo-600 text-indigo-600'
@@ -206,6 +216,14 @@ const LoginPage = () => {
                             Register
                         </button>
                     </div>
+
+                    {successMessage && activeTab === 'register' && ( 
+                        <div className={successMessageClass} role="alert">
+                            <CheckCircleIcon className="w-5 h-5 mr-2" />
+                            <span className="block sm:inline">{successMessage}</span>
+                        </div>
+                    )}
+
                     {formErrors.general && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2.5 rounded relative text-sm mb-4" role="alert">
                             <span className="block sm:inline">{formErrors.general}</span>
@@ -242,7 +260,7 @@ const LoginPage = () => {
                             </button>
                         </form>
                     ) : (
-                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" onSubmit={handleRegisterSubmit}> {/* Giảm gap-y một chút */}
+                        <form className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" onSubmit={handleRegisterSubmit}> 
                             <div className="md:col-span-2">
                                 <label htmlFor="register-email" className={commonLabelClass}>Email address</label>
                                 <input id="register-email" type="email" autoComplete="email" 
@@ -323,12 +341,13 @@ const LoginPage = () => {
                             </div>
                         </form>
                     )}
+                    {/* ... */}
                     <p className="mt-6 text-center text-sm text-gray-600"> 
                         {activeTab === 'login' ? "Don't have an account?" : "Already have an account?"}
                         <button
                             onClick={() => {
                                 setActiveTab(activeTab === 'login' ? 'register' : 'login');
-                                resetFormFields();
+                                resetFormFieldsAndMessages(); // Sử dụng hàm reset mới
                             }}
                             className="font-medium text-indigo-600 hover:text-indigo-500 ml-1 focus:outline-none">
                             {activeTab === 'login' ? 'Sign up' : 'Sign in'}
